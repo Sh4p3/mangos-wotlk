@@ -306,6 +306,7 @@ class WorldSession
 #else
         const std::string GetRemoteAddress() const { return m_socket ? m_socket->GetRemoteAddress() : "disconnected"; }
 #endif
+#endif
         const std::string& GetLocalAddress() const { return m_localAddress; }
 
         void SetPlayer(Player* plr, uint32 playerGuid);
@@ -317,6 +318,10 @@ class WorldSession
         SessionAnticheatInterface* GetAnticheat() const { return m_anticheat.get(); }
 
 #ifdef BUILD_DEPRECATED_PLAYERBOT
+        void SetNoAnticheat();
+#endif
+
+#ifdef ENABLE_PLAYERBOTS
         void SetNoAnticheat();
 #endif
 
@@ -501,6 +506,7 @@ class WorldSession
         // Misc
         void SendKnockBack(Unit* who, float angle, float horizontalSpeed, float verticalSpeed);
         void SendPlaySpellVisual(ObjectGuid guid, uint32 spellArtKit) const;
+        void SendTeleportToObservers(float x, float y, float z, float orientation);
 
         void SendAuthOk() const;
         void SendAuthQueued() const;
@@ -1016,6 +1022,12 @@ class WorldSession
 
         void SetPacketLogging(bool state);
 
+#ifdef ENABLE_PLAYERBOTS
+        // Playerbots
+        void HandleBotPackets();
+#endif
+
+        std::deque<uint32> GetOpcodeHistory();
     private:
         // Additional private opcode handlers
         void HandleComplainMail(WorldPacket& recv_data);
