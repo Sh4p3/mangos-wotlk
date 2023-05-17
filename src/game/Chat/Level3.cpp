@@ -1272,7 +1272,7 @@ bool ::ChatHandler::HandleAccountSetEditionCommand(char* args)
         if (targetPlayer)
             targetPlayer->GetSession()->AddAccountFlag(ACCOUNT_FLAG_COLLECTOR_CLASSIC | ACCOUNT_FLAG_COLLECTOR_TBC | ACCOUNT_FLAG_COLLECTOR_WRATH);
 
-        LoginDatabase.PExecute("UPDATE account SET flags = flags | 0x%x WHERE id = %u", targetAccountId, ACCOUNT_FLAG_COLLECTOR_CLASSIC | ACCOUNT_FLAG_COLLECTOR_TBC | ACCOUNT_FLAG_COLLECTOR_WRATH);
+        LoginDatabase.PExecute("UPDATE account SET flags = flags | 0x%x WHERE id = %u", (ACCOUNT_FLAG_COLLECTOR_CLASSIC | ACCOUNT_FLAG_COLLECTOR_TBC | ACCOUNT_FLAG_COLLECTOR_WRATH), targetAccountId);
         SendSysMessage("Target account Collector's Edition enabled");
         return true;
     }
@@ -1284,9 +1284,9 @@ bool ::ChatHandler::HandleAccountSetEditionCommand(char* args)
             return false;
         }
         if (targetPlayer)
-            targetPlayer->GetSession()->AddAccountFlag(ACCOUNT_FLAG_COLLECTOR_CLASSIC | ACCOUNT_FLAG_COLLECTOR_TBC | ACCOUNT_FLAG_COLLECTOR_WRATH);
+            targetPlayer->GetSession()->RemoveAccountFlag(ACCOUNT_FLAG_COLLECTOR_CLASSIC | ACCOUNT_FLAG_COLLECTOR_TBC | ACCOUNT_FLAG_COLLECTOR_WRATH);
 
-        LoginDatabase.PExecute("UPDATE account SET flags = flags & ~0x%x WHERE id = %u", targetAccountId, ACCOUNT_FLAG_COLLECTOR_CLASSIC | ACCOUNT_FLAG_COLLECTOR_TBC | ACCOUNT_FLAG_COLLECTOR_WRATH);
+        LoginDatabase.PExecute("UPDATE account SET flags = flags & ~0x%x WHERE id = %u", (ACCOUNT_FLAG_COLLECTOR_CLASSIC | ACCOUNT_FLAG_COLLECTOR_TBC | ACCOUNT_FLAG_COLLECTOR_WRATH), targetAccountId);
         SendSysMessage("Target account Collector's Edition disabled");
         return true;
     }
