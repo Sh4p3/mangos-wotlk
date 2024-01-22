@@ -139,9 +139,8 @@ void PlayerbotHolder::HandlePlayerBotLoginCallback(QueryResult * dummy, SqlQuery
         sLog.outError("Error logging in bot %d, please try to reset all random bots", guid);
         return;
     }
-    PlayerbotMgr *mgr = bot->GetPlayerbotMgr();
-    bot->SetPlayerbotMgr(NULL);
-    delete mgr;
+
+    bot->RemovePlayerbotMgr();
     sRandomPlayerbotMgr.OnPlayerLogin(bot);
 
     bool allowed = false;
@@ -251,7 +250,7 @@ class CharacterHandler
             Player* player = sObjectMgr.GetPlayer(guid, true);
             if (player)
             {
-                player->SetPlayerbotMgr(new PlayerbotMgr(player));
+                player->CreatePlayerbotMgr();
                 player->GetPlayerbotMgr()->OnPlayerLogin(player);
                 sRandomPlayerbotMgr.OnPlayerLogin(player);
             }
@@ -730,9 +729,8 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recv_data)
         PlayerbotMgr* mgr = _player->GetPlayerbotMgr();
         if (!mgr || mgr->GetMaster() != _player)
         {
-            _player->SetPlayerbotMgr(NULL);
-            delete mgr;
-            _player->SetPlayerbotMgr(new PlayerbotMgr(_player));
+            _player->RemovePlayerbotMgr();
+            _player->CreatePlayerbotMgr();
             _player->GetPlayerbotMgr()->OnPlayerLogin(_player);
 
             if (sRandomPlayerbotMgr.GetPlayerBot(playerGuid))
