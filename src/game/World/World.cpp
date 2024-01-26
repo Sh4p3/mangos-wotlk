@@ -89,6 +89,11 @@
 #include "RandomPlayerbotMgr.h"
 #endif
 
+#ifdef ENABLE_IMMERSIVE
+#include "ImmersiveConfig.h"
+#include "Immersive.h"
+#endif
+
 #include <algorithm>
 #include <mutex>
 
@@ -1214,6 +1219,10 @@ void World::SetInitialWorldSettings()
     // load SQL dbcs first, other DBCs need them
     sObjectMgr.LoadSQLDBCs();
 
+#ifdef ENABLE_IMMERSIVE
+    sImmersive.Init();
+#endif
+
     // Load before npc_text, gossip_menu_option, script_texts
     sLog.outString("Loading broadcast_text...");
     sObjectMgr.LoadBroadcastText();
@@ -1791,6 +1800,10 @@ void World::SetInitialWorldSettings()
     sPlayerbotAIConfig.Initialize();
 #endif
 
+#ifdef ENABLE_IMMERSIVE
+    sImmersiveConfig.Initialize();
+#endif
+
     sTransmogrification->LoadConfig(false);
     CharacterDatabase.Execute("DELETE FROM custom_transmogrification WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = custom_transmogrification.GUID)");
 #ifdef PRESETS
@@ -1983,6 +1996,10 @@ void World::Update(uint32 diff)
 #endif
     sRandomPlayerbotMgr.UpdateAI(diff);
     sRandomPlayerbotMgr.UpdateSessions(diff);
+#endif
+
+#ifdef ENABLE_IMMERSIVE
+    sImmersive.Update(diff);
 #endif
 
     /// <li> Handle session updates
