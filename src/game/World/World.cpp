@@ -90,7 +90,6 @@
 #endif
 
 #ifdef ENABLE_IMMERSIVE
-#include "ImmersiveConfig.h"
 #include "Immersive.h"
 #endif
 
@@ -1798,10 +1797,6 @@ void World::SetInitialWorldSettings()
 
 #ifdef ENABLE_PLAYERBOTS
     sPlayerbotAIConfig.Initialize();
-#endif
-
-#ifdef ENABLE_IMMERSIVE
-    sImmersiveConfig.Initialize();
 #endif
 
     sTransmogrification->LoadConfig(false);
