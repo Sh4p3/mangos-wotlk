@@ -53,7 +53,7 @@
 #include "Policies/Singleton.h"
 
 #ifdef ENABLE_IMMERSIVE
-#include "Immersive.h"
+#include "ImmersiveMgr.h"
 #endif
 
 ObjectGuid CreatureData::GetObjectGuid(uint32 lowguid) const
@@ -754,7 +754,7 @@ void Creature::Update(const uint32 diff)
             if (m_respawnTime <= time(nullptr) && (!m_isSpawningLinked || GetMap()->GetCreatureLinkingHolder()->CanSpawn(this)))
             {
 #ifdef ENABLE_IMMERSIVE
-                if (!sImmersive.CanCreatureRespawn(this))
+                if (!sImmersiveMgr.CanCreatureRespawn(this))
                     return;
 
                 m_manualRespawn = false;
