@@ -1104,7 +1104,9 @@ ChatCommand* ChatHandler::getCommandTable()
 #ifdef BUILD_DEPRECATED_PLAYERBOT
         { "bot",            SEC_PLAYER,         false, &ChatHandler::HandlePlayerbotCommand,           "", nullptr },
 #endif
-
+#ifdef ENABLE_HARDCORE
+        { "hardcore",       SEC_GAMEMASTER,     false, &ChatHandler::HandleHardcoreCommand,            "", nullptr },
+#endif
         { nullptr,             0,                  false, nullptr,                                           "", nullptr }
     };
 

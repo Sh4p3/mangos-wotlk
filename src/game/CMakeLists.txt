@@ -63,8 +63,19 @@ if(NOT BUILD_IKE3_BOTS)
 endif()
 
 if(NOT BUILD_IMMERSIVE)
-  # exclude Mangosbots folder
+  # exclude Immersive folder
   set (EXCLUDE_DIR "Immersive/")
+  foreach (TMP_PATH ${LIBRARY_SRCS})
+      string (FIND ${TMP_PATH} ${EXCLUDE_DIR} EXCLUDE_DIR_FOUND)
+      if (NOT ${EXCLUDE_DIR_FOUND} EQUAL -1)
+          list(REMOVE_ITEM LIBRARY_SRCS ${TMP_PATH})
+      endif ()
+  endforeach()
+endif()
+
+if(NOT BUILD_HARDCORE)
+  # exclude Hardcore folder
+  set (EXCLUDE_DIR "Hardcore/")
   foreach (TMP_PATH ${LIBRARY_SRCS})
       string (FIND ${TMP_PATH} ${EXCLUDE_DIR} EXCLUDE_DIR_FOUND)
       if (NOT ${EXCLUDE_DIR_FOUND} EQUAL -1)
@@ -196,12 +207,15 @@ if(BUILD_IKE3_BOTS)
 endif()
 
 if(BUILD_IMMERSIVE)
-    include_directories(
-        ${CMAKE_SOURCE_DIR}/src/modules/Immersive/src
-	)
-
+    include_directories(${CMAKE_SOURCE_DIR}/src/modules/Immersive/src)
 	target_link_libraries(${LIBRARY_NAME} PUBLIC Immersive)
     add_dependencies(${LIBRARY_NAME} Immersive)
+endif()
+
+if(BUILD_HARDCORE)
+    include_directories(${CMAKE_SOURCE_DIR}/src/modules/Hardcore/src)
+	target_link_libraries(${LIBRARY_NAME} PUBLIC Hardcore)
+    add_dependencies(${LIBRARY_NAME} Hardcore)
 endif()
 
 if(UNIX)
@@ -239,6 +253,11 @@ endif()
 # Define ENABLE_IMMERSIVE if need
 if (BUILD_IMMERSIVE)
   add_definitions(-DENABLE_IMMERSIVE)
+endif()
+
+# Define ENABLE_HARDCORE if need
+if (BUILD_HARDCORE)
+  add_definitions(-DENABLE_HARDCORE)
 endif()
 
 if (MSVC)

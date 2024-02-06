@@ -86,6 +86,10 @@
 #include "ImmersiveMgr.h"
 #endif
 
+#ifdef ENABLE_HARDCORE
+#include "HardcoreMgr.h"
+#endif
+
 #include <cmath>
 
 #define ZONE_UPDATE_INTERVAL (1*IN_MILLISECONDS)
@@ -947,6 +951,10 @@ bool Player::Create(uint32 guidlow, const std::string& name, uint8 race, uint8 c
         SetPower(POWER_MANA, 0);
         SetMaxPower(POWER_MANA, 0);
     }
+
+#ifdef ENABLE_HARDCORE
+    sHardcoreMgr.OnPlayerCharacterCreated(this);
+#endif
 
     LearnDefaultSkills();
     // original spells
@@ -4799,6 +4807,11 @@ void Player::DeleteFromDB(ObjectGuid playerguid, uint32 accountId, bool updateRe
             CharacterDatabase.PExecute("DELETE FROM guild_bank_eventlog WHERE PlayerGuid = '%u'", lowguid);
             CharacterDatabase.PExecute("DELETE FROM character_armory_feed WHERE guid = '%u'", lowguid);
             CharacterDatabase.CommitTransaction();
+
+#ifdef ENABLE_HARDCORE
+            sHardcoreMgr.OnPlayerCharacterDeletedFromDB(lowguid);
+#endif
+
             break;
         }
         // The character gets unlinked from the account, the name gets freed up and appears as deleted ingame
@@ -4913,6 +4926,11 @@ void Player::BuildPlayerRepop()
 
 void Player::ResurrectPlayer(float restore_percent, bool applySickness)
 {
+#ifdef ENABLE_HARDCORE
+    if (!sHardcoreMgr.OnPlayerPreResurrect(this))
+        return;
+#endif
+
     // case when player is ghouled (raise ally)
     if (IsGhouled())
         BreakCharmOutgoing();
@@ -4967,6 +4985,10 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
 
 #ifdef ENABLE_IMMERSIVE
     sImmersiveMgr.OnPlayerResurrect(this);
+#endif
+
+#ifdef ENABLE_HARDCORE
+    sHardcoreMgr.OnPlayerResurrect(this);
 #endif
 
     if (!applySickness)
@@ -5399,6 +5421,10 @@ void Player::RepopAtGraveyard()
         if (updateVisibility && IsInWorld())
             UpdateVisibilityAndView();
     }
+
+#ifdef ENABLE_HARDCORE
+    sHardcoreMgr.OnPlayerReleaseSpirit(this, ClosestGrave);
+#endif
 }
 
 void Player::JoinedChannel(Channel* c)

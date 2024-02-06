@@ -93,6 +93,10 @@
 #include "ImmersiveMgr.h"
 #endif
 
+#ifdef ENABLE_HARDCORE
+#include "HardcoreMgr.h"
+#endif
+
 #include <algorithm>
 #include <mutex>
 
@@ -1222,6 +1226,10 @@ void World::SetInitialWorldSettings()
     sImmersiveMgr.Init();
 #endif
 
+#ifdef ENABLE_HARDCORE
+    sHardcoreMgr.PreLoad();
+#endif
+
     // Load before npc_text, gossip_menu_option, script_texts
     sLog.outString("Loading broadcast_text...");
     sObjectMgr.LoadBroadcastText();
@@ -1805,6 +1813,10 @@ void World::SetInitialWorldSettings()
     // Clean even if disabled
     // Dont delete even if player has more presets than should
     CharacterDatabase.Execute("DELETE FROM `custom_transmogrification_sets` WHERE NOT EXISTS(SELECT 1 FROM characters WHERE characters.guid = custom_transmogrification_sets.Owner)");
+#endif
+
+#ifdef ENABLE_HARDCORE
+    sHardcoreMgr.Init();
 #endif
 
     sLog.outString("---------------------------------------");

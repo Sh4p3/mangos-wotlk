@@ -60,6 +60,10 @@
 #include "ImmersiveMgr.h"
 #endif
 
+#ifdef ENABLE_HARDCORE
+#include "HardcoreMgr.h"
+#endif
+
 #include <math.h>
 #include <limits>
 #include <array>
@@ -1214,6 +1218,10 @@ void Unit::Kill(Unit* killer, Unit* victim, DamageEffectType damagetype, SpellEn
         {
             DEBUG_FILTER_LOG(LOG_FILTER_DAMAGE, "SET JUST_DIED");
             victim->SetDeathState(JUST_DIED);
+
+#ifdef ENABLE_HARDCORE
+            sHardcoreMgr.OnPlayerDeath(playerVictim, killer);
+#endif
         }
 
         // playerVictim was in duel, duel must be interrupted

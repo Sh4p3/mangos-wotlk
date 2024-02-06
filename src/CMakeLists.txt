@@ -34,6 +34,11 @@ if(BUILD_IKE3_BOTS)
 add_subdirectory(modules)
 endif()
 
+# Immersive mod
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/modules/Immersive)
+  file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/modules/Immersive)
+endif()
+
 if(BUILD_IMMERSIVE)
   include(FetchContent)
 
@@ -43,16 +48,36 @@ if(BUILD_IMMERSIVE)
 	GIT_TAG "main"
   )
 
-    message(STATUS "Fetching Immersive module...")
+  message(STATUS "Fetching Immersive module...")
 
   FetchContent_Populate(immersive)
-
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/modules/Immersive)
-    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/modules/Immersive)
-  endif()
 
   file(COPY ${immersive_SOURCE_DIR}/. DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/modules/Immersive)
 
   message(STATUS "Immersive module fetched and populated in ${CMAKE_CURRENT_SOURCE_DIR}/modules/Immersive")
   add_subdirectory(modules/Immersive)
+endif()
+
+# Hardcore mod
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/modules/Hardcore)
+  file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/modules/Hardcore)
+endif()
+
+if(BUILD_HARDCORE)
+  include(FetchContent)
+
+  FetchContent_Declare(
+    hardcore
+    GIT_REPOSITORY "https://github.com/davidonete/cmangos-hardcore.git"
+	GIT_TAG "main"
+  )
+
+  message(STATUS "Fetching Hardcore module...")
+
+  FetchContent_Populate(hardcore)
+
+  file(COPY ${hardcore_SOURCE_DIR}/. DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/modules/Hardcore)
+
+  message(STATUS "Hardcore module fetched and populated in ${CMAKE_CURRENT_SOURCE_DIR}/modules/Hardcore")
+  add_subdirectory(modules/Hardcore)
 endif()
