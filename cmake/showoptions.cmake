@@ -79,10 +79,16 @@ else()
   message(STATUS "Build Immersive       : No  (default)")
 endif()
 
-if(BUILD_ACHIEVEMENTS)
+if(BUILD_HARDCORE)
   message(STATUS "Build Hardcore	    : Yes")
 else()
   message(STATUS "Build Hardcore	    : No  (default)")
+endif()
+
+if(BUILD_TRANSMOG)
+  message(STATUS "Build Transmog	    : Yes")
+else()
+  message(STATUS "Build Transmog        : No  (default)")
 endif()
 
 if(BUILD_EXTRACTORS)

@@ -73,7 +73,6 @@
 #include "Anticheat/Anticheat.hpp"
 #include "LFG/LFGMgr.h"
 #include "Vmap/GameObjectModel.h"
-#include "AI/ScriptDevAI/scripts/custom/Transmogrification.h"
 
 #ifdef BUILD_AHBOT
  #include "AuctionHouseBot/AuctionHouseBot.h"
@@ -95,6 +94,10 @@
 
 #ifdef ENABLE_HARDCORE
 #include "HardcoreMgr.h"
+#endif
+
+#ifdef ENABLE_TRANSMOG
+#include "TransmogMgr.h"
 #endif
 
 #include <algorithm>
@@ -1160,9 +1163,7 @@ void World::LoadConfigSettings(bool reload)
     //Special Cases
     setConfig(CONFIG_FLOAT_HEROIC_ARGENTTOURNAMENTRAID10_DIFF, "Solocraft.ArgentTournamentRaidH10", 10.0);
     setConfig(CONFIG_FLOAT_HEROIC_ARGENTTOURNAMENTRAID25_DIFF, "Solocraft.ArgentTournamentRaidH25", 25.0);
-//End Solocraft Config
-
-    sTransmogrification->LoadConfig(reload);
+    //End Solocraft Config
 
     sLog.outString();
 }
@@ -1807,12 +1808,8 @@ void World::SetInitialWorldSettings()
     sPlayerbotAIConfig.Initialize();
 #endif
 
-    sTransmogrification->LoadConfig(false);
-    CharacterDatabase.Execute("DELETE FROM custom_transmogrification WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = custom_transmogrification.GUID)");
-#ifdef PRESETS
-    // Clean even if disabled
-    // Dont delete even if player has more presets than should
-    CharacterDatabase.Execute("DELETE FROM `custom_transmogrification_sets` WHERE NOT EXISTS(SELECT 1 FROM characters WHERE characters.guid = custom_transmogrification_sets.Owner)");
+#ifdef ENABLE_TRANSMOG
+    sTransmogMgr.Init();
 #endif
 
 #ifdef ENABLE_HARDCORE

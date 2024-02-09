@@ -35,6 +35,10 @@
 #include "PlayerBot/Base/PlayerbotAI.h"
 #endif
 
+#ifdef ENABLE_TRANSMOG
+#include "TransmogMgr.h"
+#endif
+
 void WorldSession::HandleQuestgiverStatusQueryOpcode(WorldPacket& recv_data)
 {
     ObjectGuid guid;
@@ -105,6 +109,11 @@ void WorldSession::HandleQuestgiverHelloOpcode(WorldPacket& recv_data)
     // Stop the npc if moving
     if (uint32 pauseTimer = pCreature->GetInteractionPauseTimer())
         pCreature->GetMotionMaster()->PauseWaypoints(pauseTimer);
+
+#ifdef ENABLE_TRANSMOG
+    if (sTransmogMgr.OnPlayerGossipHello(_player, pCreature))
+        return;
+#endif
 
     if (sScriptDevAIMgr.OnGossipHello(_player, pCreature))
         return;
