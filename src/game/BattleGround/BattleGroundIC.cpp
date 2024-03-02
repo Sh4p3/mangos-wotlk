@@ -25,6 +25,10 @@
 #include "Globals/ObjectMgr.h"
 #include "Entities/Transports.h"
 
+#ifdef ENABLE_MODULES
+#include "ModuleMgr.h"
+#endif
+
 BattleGroundIC::BattleGroundIC() : m_hordeInnerGateGuid(ObjectGuid()), m_allianceInnerGate1Guid(ObjectGuid()), m_allianceInnerGate2Guid(ObjectGuid()), m_closeDoorTimer(0)
 {
     // set battleground start message ids
@@ -216,6 +220,10 @@ void BattleGroundIC::StartingEventOpenDoors()
             pTele->UseDoorOrButton();
 
     m_closeDoorTimer = BG_IC_CLOSE_DOORS_TIME;
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnStartBattleGround(this);
+#endif
 }
 
 void BattleGroundIC::UpdatePlayerScore(Player* source, uint32 type, uint32 value)
@@ -237,6 +245,10 @@ void BattleGroundIC::UpdatePlayerScore(Player* source, uint32 type, uint32 value
             BattleGround::UpdatePlayerScore(source, type, value);
             break;
     }
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnUpdatePlayerScore(this, source, type, value);
+#endif
 }
 
 // process the gate events

@@ -24,6 +24,10 @@
 #include "Tools/Language.h"
 #include "Globals/ObjectMgr.h"
 
+#ifdef ENABLE_MODULES
+#include "ModuleMgr.h"
+#endif
+
 BattleGroundSA::BattleGroundSA(): m_defendingTeamIdx(TEAM_INDEX_NEUTRAL), m_battleRoundTimer(0), m_boatStartTimer(0), m_battleStage(BG_SA_STAGE_ROUND_1), m_initialSetup(false)
 {
     // set battleground start message ids
@@ -316,6 +320,10 @@ void BattleGroundSA::StartingEventOpenDoors()
     SendBattlegroundWarning(LANG_BG_SA_BEGIN);
     GetBgMap()->GetVariableManager().SetVariable(BG_SA_STATE_ENABLE_TIMER, WORLD_STATE_ADD);
     StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, GetAttacker() == TEAM_INDEX_ALLIANCE ? BG_SA_ACHIEV_START_ID_STORM_BEACH_ALLY : BG_SA_ACHIEV_START_ID_STORM_BEACH_HORDE);
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnStartBattleGround(this);
+#endif
 }
 
 // function to allow demolishers to be used by players
@@ -363,6 +371,10 @@ void BattleGroundSA::UpdatePlayerScore(Player* source, uint32 type, uint32 value
             BattleGround::UpdatePlayerScore(source, type, value);
             break;
     }
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnUpdatePlayerScore(this, source, type, value);
+#endif
 }
 
 void BattleGroundSA::HandleCreatureCreate(Creature* creature)

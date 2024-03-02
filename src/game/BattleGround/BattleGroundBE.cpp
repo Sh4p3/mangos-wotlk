@@ -23,6 +23,10 @@
 #include "Server/WorldPacket.h"
 #include "Tools/Language.h"
 
+#ifdef ENABLE_MODULES
+#include "ModuleMgr.h"
+#endif
+
 BattleGroundBE::BattleGroundBE()
 {
     // set start delay timers
@@ -41,6 +45,10 @@ BattleGroundBE::BattleGroundBE()
 void BattleGroundBE::StartingEventOpenDoors()
 {
     OpenDoorEvent(BG_EVENT_DOOR);
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnStartBattleGround(this);
+#endif
 }
 
 bool BattleGroundBE::HandlePlayerUnderMap(Player* player)

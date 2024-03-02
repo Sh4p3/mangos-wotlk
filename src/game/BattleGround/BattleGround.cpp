@@ -34,6 +34,10 @@
 #include "Chat/Chat.h"
 #include "World/WorldStateDefines.h"
 
+#ifdef ENABLE_MODULES
+#include "ModuleMgr.h"
+#endif
+
 namespace MaNGOS
 {
     class BattleGroundChatBuilder
@@ -1391,6 +1395,10 @@ void BattleGround::RemovePlayerAtLeave(ObjectGuid playerGuid, bool isOnTransport
         if (isOnTransport)
             player->TeleportToBGEntryPoint();
 
+#ifdef ENABLE_MODULES
+        sModuleMgr.OnLeaveBattleGround(this, player);
+#endif
+
         DETAIL_LOG("BATTLEGROUND: Removed player %s from BattleGround.", player->GetName());
     }
 
@@ -1586,6 +1594,10 @@ void BattleGround::AddPlayer(Player* player)
 
     // Log
     DETAIL_LOG("BATTLEGROUND: Player %s joined the battle.", player->GetName());
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnJoinBattleGround(this, player);
+#endif
 }
 
 /* this method adds player to his team's bg group, or sets his correct group if player is already in bg group */

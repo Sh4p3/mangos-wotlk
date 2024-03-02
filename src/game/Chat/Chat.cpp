@@ -40,6 +40,10 @@
 #include "PlayerbotAIConfig.h"
 #endif
 
+#ifdef ENABLE_MODULES
+#include "ModuleMgr.h"
+#endif
+
 // Supported shift-links (client generated and server side)
 // |color|Hachievement:achievement_id:player_guid_hex:completed_0_1:mm:dd:yy_from_2000:criteriaMask1:criteriaMask2:criteriaMask3:criteriaMask4|h[name]|h|r
 //                                                                        - client, item icon shift click, not used in server currently
@@ -1104,9 +1108,6 @@ ChatCommand* ChatHandler::getCommandTable()
 #ifdef BUILD_DEPRECATED_PLAYERBOT
         { "bot",            SEC_PLAYER,         false, &ChatHandler::HandlePlayerbotCommand,           "", nullptr },
 #endif
-#ifdef ENABLE_HARDCORE
-        { "hardcore",       SEC_GAMEMASTER,     false, &ChatHandler::HandleHardcoreCommand,            "", nullptr },
-#endif
         { nullptr,             0,                  false, nullptr,                                           "", nullptr }
     };
 
@@ -1545,6 +1546,11 @@ void ChatHandler::ExecuteCommand(const char* text)
         }
         case CHAT_COMMAND_UNKNOWN:
         {
+#ifdef ENABLE_MODULES
+            if (sModuleMgr.OnExecuteCommand(this, fullcmd))
+                return;
+#endif
+
             SendSysMessage(LANG_NO_CMD);
             SetSentErrorMessage(true);
             break;

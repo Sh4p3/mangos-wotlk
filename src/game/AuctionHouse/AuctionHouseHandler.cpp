@@ -29,6 +29,10 @@
 #include "Util/Util.h"
 #include "Chat/Chat.h"
 
+#ifdef ENABLE_MODULES
+#include "ModuleMgr.h"
+#endif
+
 // please DO NOT use iterator++, because it is slower than ++iterator!!!
 // post-incrementation is always slower than pre-incrementation !
 
@@ -365,6 +369,10 @@ void WorldSession::HandleAuctionSellItem(WorldPacket& recv_data)
         SendAuctionCommandResult(AH, AUCTION_STARTED, AUCTION_OK);
 
         GetPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_CREATE_AUCTION, 1);
+
+#ifdef ENABLE_MODULES
+        sModuleMgr.OnSellItem(AH, GetPlayer());
+#endif
     }
 }
 

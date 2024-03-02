@@ -25,6 +25,10 @@
 #include "BattleGroundMgr.h"
 #include "Server/WorldPacket.h"
 
+#ifdef ENABLE_MODULES
+#include "ModuleMgr.h"
+#endif
+
 BattleGroundWS::BattleGroundWS() : m_reputationCapture(0), m_honorWinKills(0), m_honorEndKills(0), m_endTimer(0), m_lastCapturedFlagTeam()
 {
     // set battleground start message ids
@@ -142,6 +146,10 @@ void BattleGroundWS::StartingEventOpenDoors()
     GetBgMap()->GetGraveyardManager().SetGraveYardLinkTeam(WS_GRAVEYARD_MAIN_HORDE,        BG_WS_ZONE_ID_MAIN, HORDE);
     GetBgMap()->GetGraveyardManager().SetGraveYardLinkTeam(WS_GRAVEYARD_FLAGROOM_ALLIANCE, BG_WS_ZONE_ID_MAIN, TEAM_INVALID);
     GetBgMap()->GetGraveyardManager().SetGraveYardLinkTeam(WS_GRAVEYARD_FLAGROOM_HORDE,    BG_WS_ZONE_ID_MAIN, TEAM_INVALID);
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnStartBattleGround(this);
+#endif
 }
 
 void BattleGroundWS::AddPlayer(Player* player)
@@ -362,6 +370,10 @@ void BattleGroundWS::ProcessFlagPickUpFromBase(Player* player, Team attackerTeam
 
     // start timed achiev
     player->GetAchievementMgr().StartTimedAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE, player->GetTeam() == ALLIANCE ? WS_TIMED_ACHIEV_QUICK_CAP_A : WS_TIMED_ACHIEV_QUICK_CAP_H);
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnPickUpFlag(this, player, attackerTeam);
+#endif
 }
 
 // Function that handles the click action on the dropped flag
@@ -674,6 +686,10 @@ void BattleGroundWS::UpdatePlayerScore(Player* player, uint32 type, uint32 value
             BattleGround::UpdatePlayerScore(player, type, value);
             break;
     }
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnUpdatePlayerScore(this, player, type, value);
+#endif
 }
 
 Team BattleGroundWS::GetPrematureWinner()

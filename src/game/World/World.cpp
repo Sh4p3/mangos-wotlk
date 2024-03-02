@@ -88,16 +88,8 @@
 #include "RandomPlayerbotMgr.h"
 #endif
 
-#ifdef ENABLE_IMMERSIVE
-#include "ImmersiveMgr.h"
-#endif
-
-#ifdef ENABLE_HARDCORE
-#include "HardcoreMgr.h"
-#endif
-
-#ifdef ENABLE_TRANSMOG
-#include "TransmogMgr.h"
+#ifdef ENABLE_MODULES
+#include "ModuleMgr.h"
 #endif
 
 #include <algorithm>
@@ -1201,6 +1193,10 @@ void World::SetInitialWorldSettings()
         exit(1);
     }
 
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnWorldPreInitialized();
+#endif
+
     ///- Loading strings. Getting no records means core load has to be canceled because no error message can be output.
     sLog.outString("Loading MaNGOS strings...");
     if (!sObjectMgr.LoadMangosStrings())
@@ -1222,14 +1218,6 @@ void World::SetInitialWorldSettings()
 
     // load SQL dbcs first, other DBCs need them
     sObjectMgr.LoadSQLDBCs();
-
-#ifdef ENABLE_IMMERSIVE
-    sImmersiveMgr.Init();
-#endif
-
-#ifdef ENABLE_HARDCORE
-    sHardcoreMgr.PreLoad();
-#endif
 
     // Load before npc_text, gossip_menu_option, script_texts
     sLog.outString("Loading broadcast_text...");
@@ -1808,12 +1796,8 @@ void World::SetInitialWorldSettings()
     sPlayerbotAIConfig.Initialize();
 #endif
 
-#ifdef ENABLE_TRANSMOG
-    sTransmogMgr.Init();
-#endif
-
-#ifdef ENABLE_HARDCORE
-    sHardcoreMgr.Init();
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnWorldInitialized();
 #endif
 
     sLog.outString("---------------------------------------");
@@ -2002,10 +1986,6 @@ void World::Update(uint32 diff)
     sRandomPlayerbotMgr.UpdateSessions(diff);
 #endif
 
-#ifdef ENABLE_IMMERSIVE
-    sImmersiveMgr.Update(diff);
-#endif
-
     /// <li> Handle session updates
 #ifdef BUILD_METRICS
     auto preSessionTime = std::chrono::time_point_cast<std::chrono::milliseconds>(Clock::now());
@@ -2118,6 +2098,10 @@ void World::Update(uint32 diff)
     meas.add_field("map", std::to_string(map));
     meas.add_field("singletons", std::to_string(singletons));
     meas.add_field("cleanup", std::to_string(cleanup));
+#endif
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnWorldUpdated(diff);
 #endif
 }
 

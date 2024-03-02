@@ -34,74 +34,43 @@ if(BUILD_IKE3_BOTS)
 add_subdirectory(modules)
 endif()
 
-# Immersive mod
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/modules/Immersive)
-  file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/modules/Immersive)
-endif()
+# Install modules
+if(BUILD_MODULES)
+  list(LENGTH MODULE_NAMES MODULE_COUNT)
+  math(EXPR MODULE_COUNT "${MODULE_COUNT}-1")
+  foreach(INDEX RANGE ${MODULE_COUNT})
+    list(GET MODULE_NAMES ${INDEX} MODULE_NAME)
+    list(GET MODULE_URLS ${INDEX} MODULE_URL)
+	
+	string(TOLOWER ${MODULE_NAME} LOWER_MODULE_NAME)
+    if(BUILD_MODULE_${MODULE_NAME} OR BUILD_${MODULE_NAME})
+      include(FetchContent)
+	  
+	  FetchContent_Declare(
+        ${LOWER_MODULE_NAME}
+        GIT_REPOSITORY "${MODULE_URL}"
+        GIT_TAG "main"
+      )
+	  
+      if(NOT ${LOWER_MODULE_NAME}_POPULATED)
+        message(STATUS "Fetching ${LOWER_MODULE_NAME} module...")
+		
+        FetchContent_Populate(${LOWER_MODULE_NAME})
+            
+        if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/modules/${LOWER_MODULE_NAME})
+          file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/modules/${LOWER_MODULE_NAME})
+        endif()
 
-if(BUILD_IMMERSIVE)
-  include(FetchContent)
+        file(COPY ${${LOWER_MODULE_NAME}_SOURCE_DIR}/. DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/modules/${LOWER_MODULE_NAME})
+		
+        message(STATUS "${LOWER_MODULE_NAME} module fetched and populated in ${CMAKE_CURRENT_SOURCE_DIR}/modules/${LOWER_MODULE_NAME}")
+      endif()
 
-  FetchContent_Declare(
-    immersive
-    GIT_REPOSITORY "https://github.com/davidonete/cmangos-immersive.git"
-	GIT_TAG "main"
-  )
-
-  message(STATUS "Fetching Immersive module...")
-
-  FetchContent_Populate(immersive)
-
-  file(COPY ${immersive_SOURCE_DIR}/. DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/modules/Immersive)
-
-  message(STATUS "Immersive module fetched and populated in ${CMAKE_CURRENT_SOURCE_DIR}/modules/Immersive")
-  add_subdirectory(modules/Immersive)
-endif()
-
-# Hardcore mod
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/modules/Hardcore)
-  file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/modules/Hardcore)
-endif()
-
-if(BUILD_HARDCORE)
-  include(FetchContent)
-
-  FetchContent_Declare(
-    hardcore
-    GIT_REPOSITORY "https://github.com/davidonete/cmangos-hardcore.git"
-	GIT_TAG "main"
-  )
-
-  message(STATUS "Fetching Hardcore module...")
-
-  FetchContent_Populate(hardcore)
-
-  file(COPY ${hardcore_SOURCE_DIR}/. DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/modules/Hardcore)
-
-  message(STATUS "Hardcore module fetched and populated in ${CMAKE_CURRENT_SOURCE_DIR}/modules/Hardcore")
-  add_subdirectory(modules/Hardcore)
-endif()
-
-# Transmog mod
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/modules/Transmog)
-  file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/modules/Transmog)
-endif()
-
-if(BUILD_TRANSMOG)
-  include(FetchContent)
-
-  FetchContent_Declare(
-    transmog
-    GIT_REPOSITORY "https://github.com/davidonete/cmangos-transmog.git"
-	GIT_TAG "main"
-  )
-
-  message(STATUS "Fetching Transmog module...")
-
-  FetchContent_Populate(transmog)
-
-  file(COPY ${transmog_SOURCE_DIR}/. DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/modules/Transmog)
-
-  message(STATUS "Transmog module fetched and populated in ${CMAKE_CURRENT_SOURCE_DIR}/modules/Transmog")
-  add_subdirectory(modules/Transmog)
+      add_subdirectory(${CMAKE_SOURCE_DIR}/src/modules/${LOWER_MODULE_NAME})
+    else()
+      if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/modules/${LOWER_MODULE_NAME})
+        file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/modules/${LOWER_MODULE_NAME})
+      endif()
+    endif()
+  endforeach()
 endif()

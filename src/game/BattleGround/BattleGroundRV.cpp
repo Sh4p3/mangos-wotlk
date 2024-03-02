@@ -24,6 +24,10 @@
 #include "Globals/ObjectMgr.h"
 #include "Server/WorldPacket.h"
 
+#ifdef ENABLE_MODULES
+#include "ModuleMgr.h"
+#endif
+
 BattleGroundRV::BattleGroundRV(): m_uiPillarTimer(0)
 {
     // set start delay timers
@@ -60,6 +64,10 @@ void BattleGroundRV::StartingEventOpenDoors()
     OpenDoorEvent(BG_EVENT_DOOR);
 
     m_uiPillarTimer = 45000;
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnStartBattleGround(this);
+#endif
 }
 
 bool BattleGroundRV::HandlePlayerUnderMap(Player* player)

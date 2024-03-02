@@ -23,6 +23,10 @@
 #include "Server/WorldPacket.h"
 #include "Tools/Language.h"
 
+#ifdef ENABLE_MODULES
+#include "ModuleMgr.h"
+#endif
+
 BattleGroundNA::BattleGroundNA()
 {
     // set start delay timers
@@ -41,6 +45,10 @@ BattleGroundNA::BattleGroundNA()
 void BattleGroundNA::StartingEventOpenDoors()
 {
     OpenDoorEvent(BG_EVENT_DOOR);
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnStartBattleGround(this);
+#endif
 }
 
 bool BattleGroundNA::HandlePlayerUnderMap(Player* player)

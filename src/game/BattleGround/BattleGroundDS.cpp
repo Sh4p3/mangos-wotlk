@@ -24,6 +24,10 @@
 #include "Globals/ObjectMgr.h"
 #include "Server/WorldPacket.h"
 
+#ifdef ENABLE_MODULES
+#include "ModuleMgr.h"
+#endif
+
 BattleGroundDS::BattleGroundDS(): m_uiFlushTimer(0), m_uiWaterfallTimer(0), m_uiWaterfallSpellTimer(0), m_uiWaterfallStage(0)
 {
     // set start delay timers
@@ -135,6 +139,10 @@ void BattleGroundDS::StartingEventOpenDoors()
     OpenDoorEvent(BG_EVENT_DOOR);
 
     m_uiFlushTimer = 5000;
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnStartBattleGround(this);
+#endif
 }
 
 bool BattleGroundDS::HandlePlayerUnderMap(Player* player)

@@ -813,10 +813,6 @@ class ChatHandler
         bool HandleAhBotCommand(char* args);
 #endif
 
-#ifdef ENABLE_HARDCORE
-        bool HandleHardcoreCommand(char* args);
-#endif
-
         bool HandleArenaFlushPointsCommand(char* args);
         bool HandleArenaSeasonRewardsCommand(char* args);
         bool HandleArenaDataReset(char* args);

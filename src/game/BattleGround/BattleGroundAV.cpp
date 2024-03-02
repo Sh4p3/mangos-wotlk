@@ -27,6 +27,10 @@
 #include "Globals/ObjectMgr.h"
 #include "AI/ScriptDevAI/include/sc_grid_searchers.h"
 
+#ifdef ENABLE_MODULES
+#include "ModuleMgr.h"
+#endif
+
 BattleGroundAV::BattleGroundAV(): m_mineYellTimer(BG_AV_MINE_YELL), m_honorMapComplete(0), m_repTowerDestruction(0), m_repCaptain(0), m_repBoss(0), m_repOwnedGrave(0), m_repOwnedMine(0), m_repSurviveCaptain(0), m_repSurviveTower(0), m_spiritHealersSet(false)
 {
     m_startMessageIds[BG_STARTING_EVENT_FIRST]  = 0;
@@ -357,6 +361,10 @@ void BattleGroundAV::StartingEventOpenDoors()
 
     // Players that join battleground after start are not available to get achievement.
     StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_WIN_BG, BG_AV_TIMED_ACHIEV_ALTERAC_BLITZ);
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnStartBattleGround(this);
+#endif
 }
 
 void BattleGroundAV::AddPlayer(Player* player)
@@ -508,6 +516,10 @@ void BattleGroundAV::UpdatePlayerScore(Player* source, uint32 type, uint32 value
             BattleGround::UpdatePlayerScore(source, type, value);
             break;
     }
+
+#ifdef ENABLE_MODULES
+    sModuleMgr.OnUpdatePlayerScore(this, source, type, value);
+#endif
 }
 
 // Process the destruction of a battleground node

@@ -51,10 +51,6 @@
 #include "PlayerbotAIConfig.h"
 #endif
 
-#ifdef ENABLE_TRANSMOG
-#include "TransmogMgr.h"
-#endif
-
 // config option SkipCinematics supported values
 enum CinematicsSkipMode
 {
@@ -1292,10 +1288,6 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
 
     // Handle Login-Achievements (should be handled after loading)
     pCurrChar->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ON_LOGIN, 1);
-
-#ifdef ENABLE_TRANSMOG
-    sTransmogMgr.OnPlayerLogin(pCurrChar);
-#endif
 
     delete holder;
 }
