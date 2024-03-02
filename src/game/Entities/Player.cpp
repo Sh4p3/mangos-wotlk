@@ -25263,6 +25263,11 @@ AreaLockStatus Player::GetAreaTriggerLockStatus(AreaTrigger const* at, Difficult
     if (mapEntry->IsDungeon() && !mapDiff)
         return AREA_LOCKSTATUS_MISSING_DIFFICULTY;
 
+#ifdef ENABLE_PLAYERBOTS
+    if (!isRealPlayer() && GetPlayerbotAI() && GetPlayerbotAI()->CanEnterArea(at))
+        return AREA_LOCKSTATUS_OK;
+#endif
+
     if (mapDiff)
     {
         if (mapDiff->MapId == 631) // ICC Hc LK Kill requirement
