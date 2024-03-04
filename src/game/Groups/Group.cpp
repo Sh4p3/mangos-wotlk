@@ -39,6 +39,10 @@
 extern Config botConfig;
 #endif
 
+#ifdef ENABLE_MODULES
+#include "ModuleMgr.h"
+#endif
+
 GroupMemberStatus GetGroupMemberStatus(const Player* member = nullptr)
 {
     uint8 flags = MEMBER_STATUS_OFFLINE;
@@ -1621,6 +1625,11 @@ void Group::_homebindIfInstance(Player* player) const
 
 static void RewardGroupAtKill_helper(Player* pGroupGuy, Unit* pVictim, uint32 count, bool PvP, float group_rate, uint32 sum_level, bool is_dungeon, Player* not_gray_member_with_max_level, Player* member_with_max_level, uint32 xp)
 {
+#ifdef ENABLE_MODULES
+    if (!sModuleMgr.OnPreRewardPlayerAtKill(pGroupGuy, pVictim))
+    {
+#endif
+
     // honor can be in PvP and !PvP (racial leader) cases (for alive)
     if (pGroupGuy->IsAlive())
     {
@@ -1667,6 +1676,11 @@ static void RewardGroupAtKill_helper(Player* pGroupGuy, Unit* pVictim, uint32 co
             }
         }
     }
+
+#ifdef ENABLE_MODULES
+    }
+    sModuleMgr.OnRewardPlayerAtKill(pGroupGuy, pVictim);
+#endif
 }
 
 /** Provide rewards to group members at unit kill
