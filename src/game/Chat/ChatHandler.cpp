@@ -38,8 +38,8 @@
 #include "Anticheat/Anticheat.hpp"
 
 #ifdef ENABLE_PLAYERBOTS
-#include "playerbot.h"
-#include "RandomPlayerbotMgr.h"
+#include "playerbot/playerbot.h"
+#include "playerbot/RandomPlayerbotMgr.h"
 #endif
 
 #ifdef ENABLE_MODULES

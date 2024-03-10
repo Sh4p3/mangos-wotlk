@@ -51,7 +51,7 @@
 #include "Entities/Transports.h"
 
 #ifdef ENABLE_PLAYERBOTS
-#include "PlayerbotAI.h"
+#include "playerbot/PlayerbotAI.h"
 #endif
 
 #ifdef ENABLE_MODULES

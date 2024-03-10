@@ -388,7 +388,7 @@ bool Master::_StartDB()
         CharacterDatabase.HaltDelayThread();
         return false;
     }
-#ifdef BUILD_PLAYERBOT
+#ifdef BUILD_DEPRECATED_PLAYERBOT
     if (!CharacterDatabase.CheckRequiredField("playerbot_db_version", REVISION_DB_PLAYERBOTAI))
     {
         ///- Wait for already started DB delay threads to end
