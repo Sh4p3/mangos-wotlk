@@ -1727,7 +1727,7 @@ BattleGround* BattleGroundMgr::CreateNewBattleGround(BattleGroundTypeId bgTypeId
     if (bgTemplate->IsArena())
     {
         BattleGroundTypeId arenas[] = { BATTLEGROUND_NA, BATTLEGROUND_BE, BATTLEGROUND_RL, BATTLEGROUND_DS, BATTLEGROUND_RV };
-        bgTypeId = arenas[urand(0, countof(arenas) - 1)];
+        bgTypeId = arenas[urand(0, countof(arenas) - 3)];
         bgTemplate = GetBattleGroundTemplate(bgTypeId);
         if (!bgTemplate)
         {
@@ -1742,7 +1742,7 @@ BattleGround* BattleGroundMgr::CreateNewBattleGround(BattleGroundTypeId bgTypeId
     if (bgTypeId == BATTLEGROUND_RB)
     {
         BattleGroundTypeId battlegrounds[] = { BATTLEGROUND_AV, BATTLEGROUND_WS, BATTLEGROUND_AB, BATTLEGROUND_EY, BATTLEGROUND_SA, BATTLEGROUND_IC};
-        bgTypeId = battlegrounds[urand(0, countof(battlegrounds) - 1)];
+        bgTypeId = battlegrounds[urand(0, countof(battlegrounds) - 3)];
 
         bgRandomTypeId = bgTypeId;
         bgTemplate = GetBattleGroundTemplate(bgTypeId);
