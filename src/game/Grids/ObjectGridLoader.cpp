@@ -200,7 +200,13 @@ ObjectGridLoader::Visit(GameObjectMapType& m)
 
     GridType& grid = (*i_map->getNGrid(i_cell.GridX(), i_cell.GridY()))(i_cell.CellX(), i_cell.CellY());
     LoadHelper(cell_guids.gameobjects, cell_pair, m, i_gameObjects, i_map, grid);
-    LoadHelper(i_map->GetPersistentState()->GetCellObjectGuids(cell_id).gameobjects, cell_pair, m, i_gameObjects, i_map, grid);
+    if (i_map && i_map->GetPersistentState()) {
+        LoadHelper(i_map->GetPersistentState()->GetCellObjectGuids(cell_id).gameobjects, cell_pair, m, i_gameObjects, i_map, grid);
+    }
+    else {
+        sLog.outError("i_map->GetPersistentState() returned nullptr for map %u", i_map->GetId());
+    }
+        
 }
 
 void

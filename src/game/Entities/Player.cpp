@@ -18101,6 +18101,10 @@ InstancePlayerBind* Player::BindToInstance(DungeonPersistentState* state, bool p
 {
     if (state)
     {
+        if (state->GetInstanceId() <= 0) {
+            sLog.outString("Player::BindToInstance: ERROR, not binding to instance - Player: %s, MapId: %u, InstanceId: %u", GetName(), state->GetMapId(), state->GetInstanceId());
+            return nullptr;
+        }
         InstancePlayerBind& bind = m_boundInstances[state->GetDifficulty()][state->GetMapId()];
         if (extendState == EXTEND_STATE_KEEP) // special flag, keep the player's current extend state when updating for new boss down
         {
@@ -18128,6 +18132,7 @@ InstancePlayerBind* Player::BindToInstance(DungeonPersistentState* state, bool p
         {
             if (bind.state)
                 bind.state->RemovePlayer(this);
+            sLog.outString("Player::BindToInstance: Current state - Player: %s, MapId: %u, InstanceId: %u", GetName(), state->GetMapId(), state->GetInstanceId());
             state->AddPlayer(this);
         }
 
@@ -25311,12 +25316,12 @@ AreaLockStatus Player::GetAreaTriggerLockStatus(AreaTrigger const* at, Difficult
     // Level Requirements
     if (GetLevel() < at->requiredLevel && !sWorld.getConfig(CONFIG_BOOL_INSTANCE_IGNORE_LEVEL))
     {
-        miscRequirement = mapDiff->Id;
+        miscRequirement = at->requiredLevel;
         return AREA_LOCKSTATUS_TOO_LOW_LEVEL;
     }
     if (!isRegularTargetMap && !sWorld.getConfig(CONFIG_BOOL_INSTANCE_IGNORE_LEVEL) && GetLevel() < uint32(maxLevelForExpansion[mapEntry->Expansion()]))
     {
-        miscRequirement = mapDiff->Id;
+        miscRequirement = at->requiredLevel;
         return AREA_LOCKSTATUS_TOO_LOW_LEVEL;
     }
 
