@@ -476,7 +476,7 @@ void Unit::ProcDamageAndSpell(ProcSystemArguments&& data)
         if (data.attacker->m_spellProcsHappening)
             currentLevel = false; // triggered spell in proc system should not make holders ready
         data.attacker->m_spellProcsHappening = true;
-        if (data.procFlagsAttacker)
+        if (data.victim && data.procFlagsAttacker)
             data.attacker->ProcSkillsAndReactives(false, data.victim, data.procFlagsAttacker, data.procExtra, data.attType);
     }
     bool canProcVictim = data.victim && data.victim->IsAlive() && data.procFlagsVictim;
@@ -492,7 +492,7 @@ void Unit::ProcDamageAndSpell(ProcSystemArguments&& data)
     if (canProcVictim)
         data.victim->ProcDamageAndSpellFor(data, true);
 
-    if (data.attacker)
+    if (data.attacker && data.victim)
     {
         // trigger weapon enchants for weapon based spells; exclude spells that stop attack, because may break CC
 		if (data.attacker->GetTypeId() == TYPEID_PLAYER && (data.procExtra & (PROC_EX_NORMAL_HIT | PROC_EX_CRITICAL_HIT)) != 0)
