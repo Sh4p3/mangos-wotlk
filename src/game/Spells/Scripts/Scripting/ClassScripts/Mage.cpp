@@ -206,6 +206,19 @@ struct Polymorph : public AuraScript
                 return 26452;
         return 0;
     }
+
+    virtual int32 OnDurationCalculate(WorldObject const* caster, Unit const* target, int32 duration) const override
+    {
+        if (!caster || !target)
+            return duration;
+
+        const bool pvp = (target->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED) && caster->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED));
+
+        if (pvp)
+            return 10000;
+
+        return duration;
+    }
 };
 
 // 6143 - Frost Ward, 543 - Fire Ward
