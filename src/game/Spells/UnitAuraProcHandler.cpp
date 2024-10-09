@@ -480,7 +480,7 @@ void Unit::ProcDamageAndSpell(ProcSystemArguments&& data)
             data.attacker->ProcSkillsAndReactives(false, data.victim, data.procFlagsAttacker, data.procExtra, data.attType);
     }
     bool canProcVictim = data.victim && data.victim->IsAlive() && data.procFlagsVictim;
-    if (canProcVictim)
+    if (canProcVictim && data.attacker)
         data.victim->ProcSkillsAndReactives(true, data.attacker, data.procFlagsVictim, data.procExtra, data.attType);
 
     // Not much to do if no flags are set.
