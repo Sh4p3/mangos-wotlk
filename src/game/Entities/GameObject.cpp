@@ -292,8 +292,10 @@ bool GameObject::Create(uint32 dbGuid, uint32 guidlow, uint32 name_id, Map* map,
         SetStringId(goinfo->StringId, true);
 
     // Notify the battleground or outdoor pvp script
-    if (map->IsBattleGroundOrArena())
-        ((BattleGroundMap*)map)->GetBG()->HandleGameObjectCreate(this);
+    if (map->IsBattleGroundOrArena()) {
+        BattleGround* bg = ((BattleGroundMap*)map)->GetBG();
+        if (bg) bg->HandleGameObjectCreate(this);
+    }
     else if (OutdoorPvP* outdoorPvP = sOutdoorPvPMgr.GetScript(GetZoneId()))
         outdoorPvP->HandleGameObjectCreate(this);
 
