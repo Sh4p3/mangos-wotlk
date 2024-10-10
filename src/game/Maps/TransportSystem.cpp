@@ -47,7 +47,7 @@ TransportBase::TransportBase(WorldObject* owner) :
 
 TransportBase::~TransportBase()
 {
-    MANGOS_ASSERT(m_passengers.empty());
+    ClearPassengers();
 }
 
 // Update every now and then (after some change of transporter's position)
@@ -180,6 +180,17 @@ void TransportBase::UnBoardPassenger(WorldObject* passenger)
 
     // Unboard finally
     m_passengers.erase(itr);
+}
+
+void TransportBase::ClearPassengers()
+{
+    for (auto itr = m_passengers.begin(); itr != m_passengers.end(); ++itr)
+    {
+        WorldObject* passenger = itr->first;
+        UnBoardPassenger(passenger);
+    }
+
+    MANGOS_ASSERT(m_passengers.empty()); // Ensure all passengers are cleared
 }
 
 /* **************************************** TransportInfo ****************************************/

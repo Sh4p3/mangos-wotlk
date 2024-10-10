@@ -78,6 +78,8 @@ class TransportBase
         void BoardPassenger(WorldObject* passenger, float lx, float ly, float lz, float lo, uint8 seat);
         void UnBoardPassenger(WorldObject* passenger);
 
+        void ClearPassengers();
+
         WorldObject* m_owner;                               ///< The transporting unit
         PassengerMap m_passengers;                          ///< List of passengers and their transport-information
 
