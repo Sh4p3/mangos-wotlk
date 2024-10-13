@@ -31,5 +31,6 @@ class BattleGroundRL : public BattleGround
         virtual void StartingEventOpenDoors() override;
 
         bool HandlePlayerUnderMap(Player* /*player*/) override;
+        bool BattleGroundRL::HandleAreaTrigger(Player* player, uint32 trigger);
 };
 #endif

@@ -31,5 +31,6 @@ class BattleGroundNA : public BattleGround
         virtual void StartingEventOpenDoors() override;
 
         bool HandlePlayerUnderMap(Player* /*player*/) override;
+        bool BattleGroundNA::HandleAreaTrigger(Player* player, uint32 trigger);
 };
 #endif

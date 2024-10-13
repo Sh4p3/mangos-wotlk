@@ -56,3 +56,25 @@ bool BattleGroundNA::HandlePlayerUnderMap(Player* player)
     player->TeleportTo(GetMapId(), 4055.504395f, 2919.660645f, 13.611241f, player->GetOrientation());
     return true;
 }
+
+bool BattleGroundNA::HandleAreaTrigger(Player* player, uint32 trigger)
+{
+    if (GetStatus() != STATUS_IN_PROGRESS)
+        return false;
+
+    switch (trigger)
+    {
+    case 4536:                                          // buff trigger?
+    case 4537:                                          // buff trigger?
+        break;
+        // OUTSIDE OF ARENA, TELEPORT!
+    case 4917:
+    case 5006:
+    case 5008:
+        player->NearTeleportTo(4054.15f, 2923.7f, 13.4f, player->GetOrientation());
+        break;
+    default:
+        return false;
+    }
+    return true;
+}

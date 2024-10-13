@@ -31,5 +31,6 @@ class BattleGroundBE : public BattleGround
         void StartingEventOpenDoors() override;
 
         bool HandlePlayerUnderMap(Player* /*player*/) override;
+        bool HandleAreaTrigger(Player* player, uint32 trigger) override;
 };
 #endif
