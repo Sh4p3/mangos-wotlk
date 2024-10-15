@@ -7303,7 +7303,7 @@ bool ChatHandler::HandleArenaSeasonRewardsCommand(char* args)
     if (!ExtractUInt32(&args, seasonId))
         return false;
 
-    if (seasonId > 4 || seasonId == 0)
+    if (seasonId > 8 || seasonId == 0)
         return false;
 
     sBattleGroundMgr.RewardArenaSeason(seasonId);
