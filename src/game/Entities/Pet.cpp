@@ -777,14 +777,9 @@ void Pet::Unsummon(PetSaveMode mode, Unit* owner /*= nullptr*/)
     if (IsInCombat())
         CombatStop(true);
 
-    // Ensure AI exists before trying to call methods on it
     if (AI())
     {
-        AI()->OnUnsummon();  // Call the AI's unsummon method
-    }
-    else
-    {
-        sLog.outError("Pet::Unsummon called but AI() is nullptr.");
+        AI()->OnUnsummon();
     }
 
     if (owner)
