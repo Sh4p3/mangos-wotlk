@@ -3272,13 +3272,7 @@ bool IsDiminishingReturnsGroupDurationLimited(DiminishingGroup group)
 
 bool IsDiminishingReturnsGroupDurationDiminished(DiminishingGroup group, bool pvp)
 {
-    switch (group)
-    {
-        case DIMINISHING_NONE:
-                return false;
-        default:
-            return true;
-    }
+    return pvp && group != DIMINISHING_NONE;
 }
 
 DiminishingReturnsType GetDiminishingReturnsGroupType(DiminishingGroup group)
