@@ -459,7 +459,7 @@ void Unit::ProcSkillsAndReactives(bool isVictim, Unit* target, uint32 procFlags,
                 // Overpower on victim dodge
                 if (procEx & PROC_EX_DODGE && getClass() == CLASS_WARRIOR)
                 {
-                    AddComboPoints(target, 1);
+                    if (target) AddComboPoints(target, 1);
                     StartReactiveTimer(REACTIVE_OVERPOWER);
                 }
             }
@@ -476,11 +476,11 @@ void Unit::ProcDamageAndSpell(ProcSystemArguments&& data)
         if (data.attacker->m_spellProcsHappening)
             currentLevel = false; // triggered spell in proc system should not make holders ready
         data.attacker->m_spellProcsHappening = true;
-        if (data.victim && data.procFlagsAttacker)
+        if (data.procFlagsAttacker)
             data.attacker->ProcSkillsAndReactives(false, data.victim, data.procFlagsAttacker, data.procExtra, data.attType);
     }
     bool canProcVictim = data.victim && data.victim->IsAlive() && data.procFlagsVictim;
-    if (canProcVictim && data.attacker)
+    if (canProcVictim)
         data.victim->ProcSkillsAndReactives(true, data.attacker, data.procFlagsVictim, data.procExtra, data.attType);
 
     // Not much to do if no flags are set.
