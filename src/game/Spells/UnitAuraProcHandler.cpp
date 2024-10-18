@@ -543,7 +543,7 @@ void Unit::ProcDamageAndSpellFor(ProcSystemArguments& argData, bool isVictim)
     {
         SpellAuraHolder* holder = itr->second;
         // skip deleted auras (possible at recursive triggered call
-        if (holder->GetState() != SPELLAURAHOLDER_STATE_READY || holder->IsDeleted())
+        if (!holder->IsPermanent() && holder->GetState() != SPELLAURAHOLDER_STATE_READY || holder->IsDeleted())
             continue;
 
         SpellProcEventEntry const* spellProcEvent = nullptr;
@@ -3250,10 +3250,13 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(ProcExecutionData& data
                 break;
             }
             if (auraSpellInfo->SpellIconID == 2961)    // Taste for Blood
-            {
+            {               
                 // only at real damage
                 if (!damage)
                     return SPELL_AURA_PROC_FAILED;
+
+                // Now cast Overpower proc (give access to Overpower)
+                trigger_spell_id = auraSpellInfo->EffectTriggerSpell[EFFECT_INDEX_0];
             }
             else if (auraSpellInfo->Id == 50421)            // Scent of Blood
             {
