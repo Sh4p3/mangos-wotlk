@@ -3254,9 +3254,6 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(ProcExecutionData& data
                 // only at real damage
                 if (!damage)
                     return SPELL_AURA_PROC_FAILED;
-
-                // Now cast Overpower proc (give access to Overpower)
-                trigger_spell_id = auraSpellInfo->EffectTriggerSpell[EFFECT_INDEX_0];
             }
             else if (auraSpellInfo->Id == 50421)            // Scent of Blood
             {
