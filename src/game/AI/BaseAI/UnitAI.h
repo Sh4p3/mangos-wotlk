@@ -570,7 +570,10 @@ class UnitAI : public CombatActions
 
         // Vehicle Hooks
         virtual void OnPassengerRide(Unit* passenger, bool boarded, uint8 seat) {}
+        virtual void OnPassengerSpawn(uint8 seat) {}
         virtual void OnVehicleRide(Unit* vehicle, bool boarded, uint8 seat) {}
+        virtual void OnVehicleReturn(uint8 seat) {}
+        virtual void OnPassengerControlEnd(uint8 seat) {}
 
     protected:
         virtual std::string GetAIName() { return "UnitAI"; }
@@ -636,7 +639,7 @@ struct CreatureAIFactory : public SelectableAI
 
     UnitAI* Create(void*) const override;
 
-    int Permit(const Creature* c) const { return REAL_AI::Permissible(c); }
+    int Permit(const Creature* c) const override { return REAL_AI::Permissible(c); }
 };
 
 enum Permitions

@@ -385,7 +385,7 @@ Aura::Aura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 const* curr
     m_spellmod(nullptr), m_periodicTimer(0), m_periodicTick(0), m_removeMode(AURA_REMOVE_BY_DEFAULT),
     m_effIndex(eff), m_positive(false), m_isPeriodic(false), m_isAreaAura(false),
     m_isPersistent(false), m_magnetUsed(false), m_spellAuraHolder(holder),
-    m_scriptValue(0), m_storage(nullptr), m_affectOverriden(false)
+    m_scriptValue(0), m_storage(nullptr), m_scriptRef(this, NoopAuraDeleter()), m_affectOverriden(false)
 {
     MANGOS_ASSERT(target);
     MANGOS_ASSERT(spellproto && spellproto == sSpellTemplate.LookupEntry<SpellEntry>(spellproto->Id) && "`info` must be pointer to sSpellTemplate element");
@@ -1138,7 +1138,7 @@ void Aura::PickTargetsForSpellTrigger(Unit*& triggerCaster, Unit*& triggerTarget
 
 void Aura::CastTriggeredSpell(PeriodicTriggerData& data)
 {
-    Spell* spell = new Spell(data.trueCaster ? data.trueCaster : data.caster, data.spellInfo, TRIGGERED_OLD_TRIGGERED, data.trueCaster ? data.trueCaster->GetObjectGuid() : data.caster->GetObjectGuid(), GetSpellProto());
+    Spell* spell = new Spell(data.trueCaster ? data.trueCaster : data.caster, data.spellInfo, data.triggerFlags, data.trueCaster ? data.trueCaster->GetObjectGuid() : data.caster->GetObjectGuid(), GetSpellProto());
     if (data.spellInfo->HasAttribute(SPELL_ATTR_EX2_RETAIN_ITEM_CAST)) // forward guid to at least spell go
         spell->SetForwardedCastItem(GetCastItemGuid());
     if (data.trueCaster && data.caster)
@@ -2383,16 +2383,6 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
             {
                 switch (GetId())
                 {
-                    case 11403:                             // Dream Vision
-                    {
-                        if (target->IsPlayer())
-                        {
-                            Unit* pet = static_cast<Player*>(target)->GetCharm();
-                            if (pet && pet->GetEntry() == 7863)
-                                pet->SetVisibility(VISIBILITY_OFF);
-                        }
-                        break;
-                    }
                     case 1515:                              // Tame beast
                         if (Unit* caster = GetCaster()) // Wotlk - sniff - adds 1000 threat
                             target->AddThreat(caster, 1000.0f, false, GetSpellSchoolMask(GetSpellProto()), GetSpellProto());
@@ -3550,20 +3540,6 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
             break;
         case SPELLFAMILY_WARLOCK:
         {
-            // Haunt
-            if (GetSpellProto()->SpellIconID == 3172 && (GetSpellProto()->SpellFamilyFlags & uint64(0x0004000000000000)))
-            {
-                // NOTE: for avoid use additional field damage stored in dummy value (replace unused 100%
-                if (apply)
-                    m_modifier.m_amount = 0;                // use value as damage counter instead redundant 100% percent
-                else
-                {
-                    int32 bp0 = m_modifier.m_amount;
-
-                    if (Unit* caster = GetCaster())
-                        target->CastCustomSpell(caster, 48210, &bp0, nullptr, nullptr, TRIGGERED_OLD_TRIGGERED, nullptr, this);
-                }
-            }
             break;
         }
         case SPELLFAMILY_DRUID:
@@ -8951,12 +8927,6 @@ void Aura::PeriodicDummyTick()
                         case 2: target->CastSpell(target, 55739, TRIGGERED_OLD_TRIGGERED); break;
                     }
                     return;
-                case 61968:                                 // Flash Freeze
-                {
-                    if (GetAuraTicks() == 1 && !target->HasAura(62464))
-                        target->CastSpell(target, 61970, TRIGGERED_OLD_TRIGGERED, nullptr, this);
-                    return;
-                }
                 case 62018:                                 // Collapse
                 {
                     // lose 1% of health every second
@@ -8966,24 +8936,6 @@ void Aura::PeriodicDummyTick()
                 case 62019:                                 // Rune of Summoning
                 {
                     target->CastSpell(target, 62020, TRIGGERED_OLD_TRIGGERED, nullptr, this);
-                    return;
-                }
-                case 62038:                                 // Biting Cold
-                {
-                    if (target->GetTypeId() != TYPEID_PLAYER)
-                        return;
-
-                    // if player is moving remove one aura stack
-                    if (target->IsMoving())
-                        target->RemoveAuraHolderFromStack(62039);
-                    // otherwise add one aura stack each 3 seconds
-                    else if (GetAuraTicks() % 3 && !target->HasAura(62821))
-                        target->CastSpell(target, 62039, TRIGGERED_OLD_TRIGGERED, nullptr, this);
-                    return;
-                }
-                case 62039:                                 // Biting Cold
-                {
-                    target->CastSpell(target, 62188, TRIGGERED_OLD_TRIGGERED);
                     return;
                 }
                 case 62566:                                 // Healthy Spore Summon Periodic
@@ -9051,11 +9003,6 @@ void Aura::PeriodicDummyTick()
                             }
                         }
                     }
-                    return;
-                }
-                case 65272:                                 // Shatter Chest
-                {
-                    target->CastSpell(target, 62501, TRIGGERED_OLD_TRIGGERED, nullptr, this);
                     return;
                 }
                 case 66798:                                 // Death's Respite
@@ -9501,15 +9448,14 @@ void Aura::HandlePhase(bool apply, bool Real)
 
     Unit* target = GetTarget();
 
-    // always non stackable
-    if (apply)
-    {
-        Unit::AuraList const& phases = target->GetAurasByType(SPELL_AURA_PHASE);
-        if (!phases.empty())
-            target->RemoveAurasDueToSpell(phases.front()->GetId(), GetHolder());
-    }
+    // 57673 and 56678 - specifically stack
+    uint32 newPhase = 0;
+    Unit::AuraList const& phases = target->GetAurasByType(SPELL_AURA_PHASE);
+    if (!phases.empty())
+        for (auto itr = phases.begin(); itr != phases.end(); ++itr)
+            newPhase |= (*itr)->GetMiscValue();
 
-    target->SetPhaseMask(apply ? GetMiscValue() : uint32(PHASEMASK_NORMAL), true);
+    target->SetPhaseMask(newPhase ? newPhase : uint32(PHASEMASK_NORMAL), true);
     // no-phase is also phase state so same code for apply and remove
     if (target->GetTypeId() == TYPEID_PLAYER)
     {

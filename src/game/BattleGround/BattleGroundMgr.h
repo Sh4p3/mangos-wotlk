@@ -23,11 +23,12 @@
 #include "Utilities/EventProcessor.h"
 #include "Globals/SharedDefines.h"
 #include "Server/DBCEnums.h"
+#include "Util/UniqueTrackablePtr.h"
 #include "BattleGround.h"
 
 #include <mutex>
 
-typedef std::map<uint32, BattleGround*> BattleGroundSet;
+typedef std::map<uint32, MaNGOS::unique_trackable_ptr<BattleGround>> BattleGroundSet;
 
 // this container can't be deque, because deque doesn't like removing the last element - if you remove it, it invalidates next iterator and crash appears
 typedef std::list<BattleGround*> BgFreeSlotQueueType;
@@ -200,7 +201,7 @@ class BattleGroundMgr
         void BuildPlayerJoinedBattleGroundPacket(WorldPacket& /*data*/, Player* /*player*/) const;
         void BuildPlayerLeftBattleGroundPacket(WorldPacket& /*data*/, ObjectGuid /*guid*/) const;
         void BuildBattleGroundListPacket(WorldPacket& /*data*/, ObjectGuid /*guid*/, Player* /*player*/, BattleGroundTypeId /*bgTypeId*/, uint8 /*fromWhere*/) const;
-        void BuildGroupJoinedBattlegroundPacket(WorldPacket& /*data*/, GroupJoinBattlegroundResult /*result*/) const;
+        void BuildGroupJoinedBattlegroundPacket(WorldPacket& /*data*/, BattleGroundGroupJoinStatus /*result*/) const;
         void BuildUpdateWorldStatePacket(WorldPacket& /*data*/, uint32 /*field*/, uint32 /*value*/) const;
         void BuildPvpLogDataPacket(WorldPacket& /*data*/, BattleGround* /*bg*/) const;
         void BuildBattleGroundStatusPacket(WorldPacket& /*data*/, BattleGround* /*bg*/, uint8 /*queueSlot*/, uint8 /*statusId*/, uint32 /*time1*/, uint32 /*time2*/, ArenaType /*arenaType*/, Team /*arenaTeam*/) const;
@@ -215,7 +216,7 @@ class BattleGroundMgr
 
         uint32 CreateBattleGround(BattleGroundTypeId /*bgTypeId*/, bool /*isArena*/, uint32 /*minPlayersPerTeam*/, uint32 /*maxPlayersPerTeam*/, uint32 /*levelMin*/, uint32 /*levelMax*/, char const* /*battleGroundName*/, uint32 /*mapId*/, float /*team1StartLocX*/, float /*team1StartLocY*/, float /*team1StartLocZ*/, float /*team1StartLocO*/, float /*team2StartLocX*/, float /*team2StartLocY*/, float /*team2StartLocZ*/, float /*team2StartLocO*/, float /*startMaxDist*/, uint32 /*playerSkinReflootId*/);
 
-        void AddBattleGround(uint32 instanceId, BattleGroundTypeId bgTypeId, BattleGround* bg) { m_battleGrounds[bgTypeId][instanceId] = bg; };
+        void AddBattleGround(uint32 instanceId, BattleGroundTypeId bgTypeId, BattleGround* bg);;
         void RemoveBattleGround(uint32 instanceId, BattleGroundTypeId bgTypeId) { m_battleGrounds[bgTypeId].erase(instanceId); }
 
         uint32 CreateClientVisibleInstanceId(BattleGroundTypeId /*bgTypeId*/, BattleGroundBracketId /*bracketId*/);
@@ -247,34 +248,39 @@ class BattleGroundMgr
         void ToggleArenaTesting();
         void ToggleTesting();
 
-        void LoadBattleMastersEntry();
+        void LoadBattleMastersEntry(bool reload);
         BattleGroundTypeId GetBattleMasterBG(uint32 entry) const
         {
-            BattleMastersMap::const_iterator itr = m_battleMastersMap.find(entry);
-            if (itr != m_battleMastersMap.end())
+            BattleMastersMap::const_iterator itr = m_battleMastersMap->find(entry);
+            if (itr != m_battleMastersMap->end())
                 return itr->second;
 
             return BATTLEGROUND_TYPE_NONE;
         }
+        std::shared_ptr<BattleMastersMap> GetBattleMastersMap() const { return m_battleMastersMap; }
 
-        void LoadBattleEventIndexes();
+        void LoadBattleEventIndexes(bool reload);
         const BattleGroundEventIdx GetCreatureEventIndex(uint32 dbGuid) const
         {
-            CreatureBattleEventIndexesMap::const_iterator itr = m_creatureBattleEventIndexMap.find(dbGuid);
-            if (itr != m_creatureBattleEventIndexMap.end())
+            CreatureBattleEventIndexesMap::const_iterator itr = m_creatureBattleEventIndexMap->find(dbGuid);
+            if (itr != m_creatureBattleEventIndexMap->end())
                 return itr->second;
 
-            return m_creatureBattleEventIndexMap.find(static_cast<uint32>(-1))->second;
+            return m_creatureBattleEventIndexMap->find(static_cast<uint32>(-1))->second;
         }
+
+        std::shared_ptr<CreatureBattleEventIndexesMap> GetCreatureEventIndexes() const { return m_creatureBattleEventIndexMap; }
 
         const BattleGroundEventIdx GetGameObjectEventIndex(uint32 dbGuid) const
         {
-            GameObjectBattleEventIndexesMap::const_iterator itr = m_gameObjectBattleEventIndexMap.find(dbGuid);
-            if (itr != m_gameObjectBattleEventIndexMap.end())
+            GameObjectBattleEventIndexesMap::const_iterator itr = m_gameObjectBattleEventIndexMap->find(dbGuid);
+            if (itr != m_gameObjectBattleEventIndexMap->end())
                 return itr->second;
 
-            return m_gameObjectBattleEventIndexMap.find(static_cast<uint32>(-1))->second;
+            return m_gameObjectBattleEventIndexMap->find(static_cast<uint32>(-1))->second;
         }
+
+        std::shared_ptr<GameObjectBattleEventIndexesMap> GetGameObjectEventIndexes() const { return m_gameObjectBattleEventIndexMap; }
 
         bool IsArenaTesting() const { return m_arenaTesting; }
         bool IsTesting() const { return m_testing; }
@@ -290,11 +296,13 @@ class BattleGroundMgr
         static bool IsBgWeekend(BattleGroundTypeId /*bgTypeId*/);
 
         std::set<uint32> const& GetUsedRefLootIds() const { return m_usedRefloot; }
+
+        Messager<BattleGroundMgr>& GetMessager() { return m_messager; }
     private:
         std::mutex schedulerLock;
-        BattleMastersMap m_battleMastersMap;
-        CreatureBattleEventIndexesMap m_creatureBattleEventIndexMap;
-        GameObjectBattleEventIndexesMap m_gameObjectBattleEventIndexMap;
+        std::shared_ptr<BattleMastersMap> m_battleMastersMap;
+        std::shared_ptr<CreatureBattleEventIndexesMap> m_creatureBattleEventIndexMap;
+        std::shared_ptr<GameObjectBattleEventIndexesMap> m_gameObjectBattleEventIndexMap;
 
         /* Battlegrounds */
         BattleGroundSet m_battleGrounds[MAX_BATTLEGROUND_TYPE_ID];
@@ -307,6 +315,8 @@ class BattleGroundMgr
         bool   m_arenaTesting;
         bool   m_testing;
         std::set<uint32> m_usedRefloot;
+
+        Messager<BattleGroundMgr> m_messager;
 };
 
 #define sBattleGroundMgr MaNGOS::Singleton<BattleGroundMgr>::Instance()

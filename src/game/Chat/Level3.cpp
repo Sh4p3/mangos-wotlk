@@ -840,7 +840,10 @@ bool ChatHandler::HandleReloadItemRequiredTragetCommand(char* /*args*/)
 bool ChatHandler::HandleReloadBattleEventCommand(char* /*args*/)
 {
     sLog.outString("Re-Loading BattleGround Eventindexes...");
-    sBattleGroundMgr.LoadBattleEventIndexes();
+    sBattleGroundMgr.GetMessager().AddMessage([](BattleGroundMgr* mgr)
+    {
+        mgr->LoadBattleEventIndexes(true);
+    });
     SendGlobalSysMessage("DB table `gameobject_battleground` and `creature_battleground` reloaded.");
     return true;
 }
@@ -3324,7 +3327,7 @@ bool ChatHandler::HandleLookupQuestCommand(char* args)
     ObjectMgr::QuestMap const& qTemplates = sObjectMgr.GetQuestTemplates();
     for (const auto& qTemplate : qTemplates)
     {
-        Quest* qinfo = qTemplate.second;
+        Quest* qinfo = qTemplate.second.get();
 
         std::string title;                                  // "" for avoid repeating check default locale
         sObjectMgr.GetQuestLocaleStrings(qinfo->GetQuestId(), loc_idx, &title);
@@ -3596,10 +3599,7 @@ bool ChatHandler::HandleGuildUninviteCommand(char* args)
         return false;
 
     if (targetGuild->DelMember(target_guid))
-    {
         targetGuild->Disband();
-        delete targetGuild;
-    }
 
     return true;
 }
@@ -3664,7 +3664,6 @@ bool ChatHandler::HandleGuildDeleteCommand(char* args)
         return false;
 
     targetGuild->Disband();
-    delete targetGuild;
 
     return true;
 }
@@ -7293,7 +7292,10 @@ bool ChatHandler::HandleSendMessageCommand(char* args)
 
 bool ChatHandler::HandleArenaFlushPointsCommand(char* /*args*/)
 {
-    sBattleGroundMgr.DistributeArenaPoints();
+    sBattleGroundMgr.GetMessager().AddMessage([](BattleGroundMgr* mgr)
+    {
+        mgr->DistributeArenaPoints();
+    });
     return true;
 }
 
@@ -7306,7 +7308,10 @@ bool ChatHandler::HandleArenaSeasonRewardsCommand(char* args)
     if (seasonId > 8 || seasonId == 0)
         return false;
 
-    sBattleGroundMgr.RewardArenaSeason(seasonId);
+    sBattleGroundMgr.GetMessager().AddMessage([seasonId](BattleGroundMgr* mgr)
+    {
+        mgr->RewardArenaSeason(seasonId);
+    });
     return true;
 }
 
@@ -7320,7 +7325,10 @@ bool ChatHandler::HandleArenaDataReset(char* args)
     }
 
     PSendSysMessage("Resetting all arena data.");
-    sBattleGroundMgr.ResetAllArenaData();
+    sBattleGroundMgr.GetMessager().AddMessage([](BattleGroundMgr* mgr)
+    {
+        mgr->ResetAllArenaData();
+    });
     return true;
 }
 

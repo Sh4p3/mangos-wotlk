@@ -28,6 +28,7 @@
 #include "Server/DBCEnums.h"
 #include "Globals/SharedDefines.h"
 #include "LFG/LFG.h"
+#include "Util/UniqueTrackablePtr.h"
 
 struct ItemPrototype;
 
@@ -218,7 +219,7 @@ class Group
 
         void SetBattlegroundGroup(BattleGround* bg) { m_bgGroup = bg; }
         void SetBattlefieldGroup(Battlefield* bf) { m_bfGroup = bf; }
-        GroupJoinBattlegroundResult CanJoinBattleGroundQueue(BattleGround const* bgOrTemplate, BattleGroundQueueTypeId bgQueueTypeId, uint32 MinPlayerCount, uint32 MaxPlayerCount, bool isRated, uint32 arenaSlot);
+        BattleGroundGroupJoinStatus CanJoinBattleGroundQueue(BattleGround const* bgOrTemplate, BattleGroundQueueTypeId bgQueueTypeId, uint32 MinPlayerCount, uint32 MaxPlayerCount, bool isRated, uint32 arenaSlot);
 
         void ChangeMembersGroup(ObjectGuid guid, uint8 group);
         void ChangeMembersGroup(Player* player, uint8 group);
@@ -301,6 +302,8 @@ class Group
 #ifdef ENABLE_PLAYERBOTS
         ObjectGuid GetTargetIcon(int index) { return m_targetIcons[index]; }
 #endif
+
+        MaNGOS::unique_weak_ptr<Group> GetWeakPtr() const { return m_scriptRef; }
 
     protected:
         bool _addMember(ObjectGuid guid, const char* name, bool isAssistant = false);
@@ -396,5 +399,8 @@ class Group
         uint8*              m_subGroupsCounts;
 
         LFGData             m_lfgData;
+
+        struct NoopGroupDeleter { void operator()(Group*) const { /*noop - not managed*/ } };
+        MaNGOS::unique_trackable_ptr<Group> m_scriptRef;
 };
 #endif

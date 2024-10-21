@@ -535,7 +535,7 @@ Spell::Spell(WorldObject* caster, SpellEntry const* info, uint32 triggeredFlags,
     m_petCast = (triggeredFlags & TRIGGERED_PET_CAST) != 0;
     m_notifyAI = (triggeredFlags & TRIGGERED_NORMAL_COMBAT_CAST) != 0;
     m_ignoreGCD = m_IsTriggeredSpell || ((triggeredFlags & TRIGGERED_IGNORE_GCD) != 0);
-    m_ignoreCosts = m_IsTriggeredSpell || ((triggeredFlags & TRIGGERED_IGNORE_COSTS) != 0);
+    m_ignoreCosts = (m_IsTriggeredSpell && (triggeredFlags & TRIGGERED_FORCE_COSTS) == 0) || ((triggeredFlags & TRIGGERED_IGNORE_COSTS) != 0);
     m_ignoreCooldowns = m_IsTriggeredSpell || ((triggeredFlags & TRIGGERED_IGNORE_COOLDOWNS) != 0);
     m_ignoreConcurrentCasts = m_IsTriggeredSpell || ((triggeredFlags & TRIGGERED_IGNORE_CURRENT_CASTED_SPELL) != 0) || m_spellInfo->HasAttribute(SPELL_ATTR_EX4_ALLOW_CAST_WHILE_CASTING);
     m_ignoreCasterAuraState = m_IsTriggeredSpell || ((triggeredFlags & TRIGGERED_IGNORE_CASTER_AURA_STATE) != 0 || m_spellInfo->HasAttribute(SPELL_ATTR_EX5_IGNORE_CASTER_REQUIREMENTS));
@@ -1466,13 +1466,6 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
         // Do triggers for unit (reflect triggers passed on hit phase for correct drop charge)
         if (m_canTrigger && missInfo != SPELL_MISS_REFLECT)
             Unit::ProcDamageAndSpell(ProcSystemArguments(affectiveCaster, unitTarget, affectiveCaster ? procAttacker : uint32(PROC_FLAG_NONE), procVictim, procEx, spellDamageInfo.damage, spellDamageInfo.absorb, m_attackType, m_spellInfo, this));
-
-        // Haunt (NOTE: for avoid use additional field damage stored in dummy value (replace unused 100%)
-        // apply before deal damage because aura can be removed at target kill
-        if (m_spellInfo->SpellFamilyName == SPELLFAMILY_WARLOCK && m_spellInfo->SpellIconID == 3172 &&
-            (m_spellInfo->SpellFamilyFlags & uint64(0x0004000000000000)))
-            if (Aura* dummy = unitTarget->GetDummyAura(m_spellInfo->Id))
-                dummy->GetModifier()->m_amount = spellDamageInfo.damage;
     }
     // Passive spell hits/misses or active spells only misses (only triggers if proc flags set)
     else if (procAttacker || procVictim)
@@ -5885,7 +5878,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                 }
             }
 
-            if (IsPositiveSpell(m_spellInfo->Id, m_trueCaster, target) && affectedMask)
+            if (!ignoreRestrictions && IsPositiveSpell(m_spellInfo->Id, m_trueCaster, target) && affectedMask)
                 if (target->IsImmuneToSpell(m_spellInfo, target == m_trueCaster, affectedMask, m_trueCaster))
                     return SPELL_FAILED_TARGET_AURASTATE;
 
@@ -8543,23 +8536,24 @@ bool Spell::HaveTargetsForEffect(SpellEffectIndex effect) const
 
 SpellEvent::SpellEvent(Spell* spell) : BasicEvent()
 {
-    m_Spell = spell;
+    m_Spell.reset(spell, [](Spell* toDelete)
+    {
+        if (toDelete->IsDeletable() || World::IsStopped())
+        {
+            delete toDelete;
+        }
+        else
+        {
+            sLog.outError("~SpellEvent: %s %u tried to delete non-deletable spell %u. Was not deleted, causes memory leak.",
+                          (toDelete->GetCaster()->GetTypeId() == TYPEID_PLAYER ? "Player" : "Creature"), toDelete->GetCaster()->GetGUIDLow(), toDelete->m_spellInfo->Id);
+        }
+    });
 }
 
 SpellEvent::~SpellEvent()
 {
     if (m_Spell->getState() != SPELL_STATE_FINISHED)
         m_Spell->cancel();
-
-    if (m_Spell->IsDeletable() || World::IsStopped())
-    {
-        delete m_Spell;
-    }
-    else
-    {
-        sLog.outError("~SpellEvent: %s %u tried to delete non-deletable spell %u. Was not deleted, causes memory leak.",
-                      (m_Spell->GetCaster()->GetTypeId() == TYPEID_PLAYER ? "Player" : "Creature"), m_Spell->GetCaster()->GetGUIDLow(), m_Spell->m_spellInfo->Id);
-    }
 }
 
 bool SpellEvent::Execute(uint64 e_time, uint32 p_time)
@@ -10036,3 +10030,7 @@ SpellCastResult Spell::CheckVehicle(Unit const* caster, SpellEntry const& spellI
     return SPELL_CAST_OK;
 }
 
+MaNGOS::unique_weak_ptr<Spell> Spell::GetWeakPtr() const
+{
+    return m_spellEvent->GetSpellWeakPtr();
+}

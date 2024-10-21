@@ -3469,13 +3469,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     return;
                 }
-                case 63499:                                 // Dispel Magic
-                {
-                    if (unitTarget)
-                        unitTarget->RemoveAurasDueToSpell(m_spellInfo->CalculateSimpleValue(eff_idx));
-
-                    return;
-                }
                 case 63545:                                 // Icicle
                 {
                     if (unitTarget && unitTarget->GetTypeId() == TYPEID_PLAYER)
@@ -5824,7 +5817,7 @@ void Spell::EffectSummonType(SpellEffectIndex eff_idx)
                         if (damage >= 0 && damage < MAX_VEHICLE_SEAT)
                             seatNumber = damage;
                         else
-                            rideSpell = seatNumber;
+                            rideSpell = damage;
                         break;
                 }
                 break;
@@ -11733,6 +11726,9 @@ void Spell::EffectKnockBack(SpellEffectIndex eff_idx)
             break;
     }
 
+    if (unitTarget->hasUnitState(UNIT_STAT_ROOT))
+        return;
+
     unitTarget->KnockBackFrom(m_caster, float(m_spellInfo->EffectMiscValue[eff_idx]) / 10, float(damage) / 10);
 }
 
@@ -11764,14 +11760,11 @@ void Spell::EffectPullTowards(SpellEffectIndex eff_idx)
         dist = sqrt(unitTarget->GetDistance2d(x, y, DIST_CALC_NONE));
     }
 
-    if (damage && dist > damage)
-        dist = float(damage);
-
     if (dist < 0.1f)
         return;
 
     // Projectile motion
-    float speedXY = float(m_spellInfo->EffectMiscValue[eff_idx]) * 0.1f;
+    float speedXY = float(std::max(1, m_spellInfo->EffectMiscValue[eff_idx])) * 0.1f;
     float time = dist / speedXY;
     float speedZ = ((z - unitTarget->GetPositionZ()) + 0.5f * time * time * Movement::gravity) / time;
     float angle = unitTarget->GetAngle(x, y);

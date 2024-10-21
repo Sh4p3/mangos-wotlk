@@ -318,6 +318,10 @@ Unit::Unit() :
     // implement 50% base damage from offhand
     m_auraModifiersGroup[UNIT_MOD_DAMAGE_OFFHAND][TOTAL_PCT] = 0.5f;
 
+    for (auto& i : m_attackPowerMod)
+        for (auto& k : i)
+            k = 0;
+
     for (float& m_createStat : m_createStats)
         m_createStat = 0.0f;
 
@@ -397,7 +401,6 @@ Unit::~Unit()
 
     delete m_combatData;
     delete m_charmInfo;
-    delete m_vehicleInfo;
     delete movespline;
 
     // those should be already removed at "RemoveFromWorld()" call
@@ -2668,7 +2671,7 @@ void Unit::CalculateDamageAbsorbAndResist(Unit* caster, SpellSchoolMask schoolMa
                 currentAbsorb = maxAbsorb;
 
             int32 manaReduction = int32(currentAbsorb * manaMultiplier);
-            ApplyPowerMod(POWER_MANA, manaReduction, false);
+            ModifyPower(POWER_MANA, -manaReduction);
         }
 
         // Mana Shield (or Fire Ward or Frost Ward or Ice Barrier)
@@ -3174,7 +3177,8 @@ SpellMissInfo Unit::SpellHitResult(WorldObject* caster, Unit* pVictim, SpellEntr
 
     // All positive spells can`t miss
     // TODO: client not show miss log for this spells - so need find info for this in dbc and use it!
-    if (IsPositiveEffectMask(spellInfo, effectMask, caster, pVictim))
+    bool ignoreRestrictions = spellInfo->HasAttribute(SPELL_ATTR_EX3_IGNORE_CASTER_AND_TARGET_RESTRICTIONS) || spellInfo->HasAttribute(SPELL_ATTR_EX5_IGNORE_TARGET_REQUIREMENTS);
+    if (!ignoreRestrictions && IsPositiveEffectMask(spellInfo, effectMask, caster, pVictim))
     {
         if (pVictim->IsImmuneToSpell(spellInfo, reflected ? false : (caster == pVictim), effectMask, caster))
             return SPELL_MISS_IMMUNE;
@@ -3279,12 +3283,6 @@ bool Unit::CanGlance() const
     if (GetTypeId() == TYPEID_PLAYER || HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED))
         return !GetCharmerGuid().IsCreature();
     return false;
-}
-
-bool Unit::CanDaze() const
-{
-    // Generally, only npcs are able to daze targets in melee
-    return (GetTypeId() == TYPEID_UNIT && !HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED));
 }
 
 void Unit::SetCanDodge(const bool flag)
@@ -5687,7 +5685,7 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolder* holder)
             {
                 // holder cannot remove higher/stronger rank if it isn't from the same caster
                 // judgement excluded due to invalid comparison of dummy auras
-                if (specific != SPELL_JUDGEMENT && IsSimilarExistingAuraStronger(holder, existing)) // TROLOLO
+                if (!IsSpellSpecificInterchangeable(specific) && IsSimilarExistingAuraStronger(holder, existing)) // TROLOLO
                     return false;
 
                 if (!diminished && sSpellMgr.IsSpellAnotherRankOfSpell(spellId, existingSpellId) && sSpellMgr.IsSpellHigherRankOfSpell(existingSpellId, spellId))
@@ -6225,6 +6223,7 @@ void Unit::RemoveAura(Aura* Aur, AuraRemoveMode mode)
 
     // Set remove mode
     Aur->SetRemoveMode(mode);
+    Aur->InvalidateScriptRef();
 
     // some ShapeshiftBoosts at remove trigger removing other auras including parent Shapeshift aura
     // remove aura from list before to prevent deleting it before
@@ -7987,11 +7986,9 @@ void Unit::EnergizeBySpell(Unit* victim, SpellEntry const* spellInfo, uint32 dam
  */
 int32 Unit::SpellBonusWithCoeffs(SpellEntry const* spellProto, SpellEffectIndex effectIndex, int32 total, int32 benefit, int32 ap_benefit,  DamageEffectType damagetype, bool donePart, float defCoeffMod)
 {
-    // Distribute Damage over multiple effects, reduce by AoE
-    float coeff = 1.0f;
-
-    // Not apply this to creature casted spells
-    if (GetTypeId() == TYPEID_UNIT && !((Creature*)this)->IsPet())
+    float coeff = 0.f; // no coefficient by default
+    // does not apply to creatures
+    if (IsCreature() && !IsPlayerControlled())
         coeff = 1.0f;
     // Check for table values
     if (spellProto->effectBonusCoefficient[effectIndex] > 0 || spellProto->effectBonusCoefficientFromAP[effectIndex] > 0)
@@ -8012,9 +8009,6 @@ int32 Unit::SpellBonusWithCoeffs(SpellEntry const* spellProto, SpellEffectIndex 
             total += int32(ap_bonus * (GetTotalAttackPowerValue(IsSpellRequiresRangedAP(spellProto) ? RANGED_ATTACK : BASE_ATTACK) + ap_benefit));
         }
     }
-    // Default calculation
-    else if (benefit)
-        coeff = CalculateDefaultCoefficient(spellProto, damagetype) * defCoeffMod;
 
     if (benefit)
     {
@@ -9095,7 +9089,7 @@ void Unit::SetInCombatState(bool PvP, Unit* enemy)
         if (InstanceData* mapInstance = GetInstanceData())
             mapInstance->OnCreatureEnterCombat(creature);
 
-        creature->CallAssistance();
+        creature->CallAssistance(enemy);
 
         creature->SetCanCheckForHelp(false);
         creature->m_events.AddEvent(new UnitLambdaEvent(*creature, [](Unit& unit)
@@ -10188,6 +10182,15 @@ bool Unit::HandleStatModifier(UnitMods unitMod, UnitModifierType modifierType, f
         case BASE_VALUE:
         case TOTAL_VALUE:
             m_auraModifiersGroup[unitMod][modifierType] += apply ? amount : -amount;
+
+            if (modifierType == TOTAL_VALUE)
+            {
+                auto sign = amount > 0 ? AttackPowerModSign::MOD_SIGN_POS : AttackPowerModSign::MOD_SIGN_NEG;
+                if (unitMod == UNIT_MOD_ATTACK_POWER)
+                    m_attackPowerMod[size_t(AttackPowerMod::MELEE_ATTACK_POWER)][size_t(sign)] += apply ? amount : -amount;
+                else if (unitMod == UNIT_MOD_ATTACK_POWER_RANGED)
+                    m_attackPowerMod[size_t(AttackPowerMod::RANGED_ATTACK_POWER)][size_t(sign)] += apply ? amount : -amount;
+            }
             break;
         case BASE_PCT:
         case TOTAL_PCT:
@@ -10382,7 +10385,7 @@ float Unit::GetTotalAttackPowerValue(WeaponAttackType attType) const
             return 0.0f;
         return ap * (1.0f + GetFloatValue(UNIT_FIELD_RANGED_ATTACK_POWER_MULTIPLIER));
     }
-    int32 ap = GetInt32Value(UNIT_FIELD_ATTACK_POWER) + GetInt32Value(UNIT_FIELD_ATTACK_POWER_MODS);
+    int32 ap = GetInt32Value(UNIT_FIELD_ATTACK_POWER) + GetUInt16Value(UNIT_FIELD_ATTACK_POWER_MODS, 0) - GetUInt16Value(UNIT_FIELD_ATTACK_POWER_MODS, 1);
     if (ap < 0)
         return 0.0f;
     return ap * (1.0f + GetFloatValue(UNIT_FIELD_ATTACK_POWER_MULTIPLIER));
@@ -10540,6 +10543,7 @@ void Unit::SetMaxPower(Powers power, uint32 val)
 
 void Unit::ApplyPowerMod(Powers power, uint32 val, bool apply)
 {
+    m_unitPower[power] = m_unitPower[power] + (apply ? val : -val);
     ApplyModUInt32Value(UNIT_FIELD_POWER1 + power, val, apply);
 
     // group update
@@ -12311,7 +12315,13 @@ bool Unit::IsAllowedDamageInArea(Unit* attacker, Unit* pVictim)
 
     // can't damage player controlled unit by player controlled unit in sanctuary
     AreaTableEntry const* area = GetAreaEntryByAreaID(pVictim->GetAreaId());
-    return !(area && area->flags & AREA_FLAG_SANCTUARY);
+    if (!area || !(area->flags & AREA_FLAG_SANCTUARY))
+        return true;
+
+    if (pVictim->IsIgnoringSanctuary())
+        return true;
+    else
+        return false;
 }
 
 class UnitVisitObjectsInRangeNotifyEvent : public BasicEvent
@@ -12402,19 +12412,18 @@ void Unit::SetVehicleId(uint32 entry, uint32 overwriteNpcEntry)
     if (m_vehicleInfo && entry == m_vehicleInfo->GetVehicleEntry()->m_ID)
         return;
 
-    delete m_vehicleInfo;
+    m_vehicleInfo = nullptr;
 
     if (entry)
     {
         VehicleEntry const* ventry = sVehicleStore.LookupEntry(entry);
         MANGOS_ASSERT(ventry != nullptr);
 
-        m_vehicleInfo = new VehicleInfo(this, ventry, overwriteNpcEntry);
+        m_vehicleInfo.reset(new VehicleInfo(this, ventry, overwriteNpcEntry));
         m_updateFlag |= UPDATEFLAG_VEHICLE;
     }
     else
     {
-        m_vehicleInfo = nullptr;
         m_updateFlag &= ~UPDATEFLAG_VEHICLE;
     }
 
@@ -12667,14 +12676,6 @@ Unit* Unit::TakePossessOf(SpellEntry const* spellEntry, SummonPropertiesEntry co
     // New flags for the duration of charm need to be set after SetCharmState, gets reset in ResetCharmState
     if (HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED))
         possessed->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
-
-    const bool immunePC = IsImmuneToPlayer();
-    if (possessed->IsImmuneToPlayer() != immunePC)
-        possessed->SetImmuneToPlayer(immunePC);
-
-    const bool immuneNPC = IsImmuneToNPC();
-    if (possessed->IsImmuneToNPC() != immuneNPC)
-        possessed->SetImmuneToNPC(immuneNPC);
 
     charmInfo->ProcessUnattackableTargets(possessed->m_combatData);
 

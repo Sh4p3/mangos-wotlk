@@ -364,6 +364,10 @@ enum WorldStateID : int32
     WORLD_STATE_LEGIONNAIRE_003     = 5400003,              // Spawns Legionnaire 04 and 05 groups
     WORLD_STATE_CUSTOM_SPAWN_WAVES  = 5400004,              // Spawns initial waves at gauntlet of flame
 
+    // The Arcatraz
+    WORLD_STATE_PROTEAN_HORROR     = 5520001,               // Prevents that Protean Horrors respawn
+    WORLD_STATE_PROTEAN_NIGHTMARE  = 5520002,               // Prevents that Protean Nightmare respawn
+
     // Wotlk
     WORLD_STATE_CUSTOM_HEADLESS_HORSEMAN_DUNGEON    = 20000,
     WORLD_STATE_CUSTOM_AHUNE_DUNGEON                = 20001,
@@ -378,6 +382,8 @@ enum WorldStateID : int32
     WORLD_STATE_CUSTOM_ICC_GRP_06                   = 350006,
     WORLD_STATE_CUSTOM_ICC_GRP_07                   = 350007,
     WORLD_STATE_CUSTOM_ICC_GRP_08                   = 350008,
+    WORLD_STATE_CUSTOM_ICC_GRP_09                   = 350009,
+    WORLD_STATE_CUSTOM_ICC_GRP_10                   = 350010,
 
     // Obsidian Sanctum
     WORLD_STATE_CUSTOM_SPAWN_FLAME_WALL_LEFT    = 20004,

@@ -43,6 +43,7 @@
 #include "Grids/ObjectGridLoader.h"
 #include "Vmap/GameObjectModel.h"
 #include "LFG/LFGMgr.h"
+#include "BattleGround/BattleGroundMgr.h"
 
 #ifdef BUILD_METRICS
  #include "Metric/Metric.h"
@@ -2515,7 +2516,13 @@ void BattleGroundMap::Update(const uint32& diff)
         // ]]
         // BattleGround Template instance cannot be updated, because it would be deleted
         if (!m_bg->GetInvitedCount(HORDE) && !m_bg->GetInvitedCount(ALLIANCE))
-            delete m_bg;
+        {
+            sBattleGroundMgr.GetMessager().AddMessage([instanceId = GetInstanceId(), typeId = m_bg->GetTypeId()](BattleGroundMgr* mgr)
+            {
+                mgr->RemoveBattleGround(instanceId, typeId);
+            });
+            m_bg = nullptr;
+        }
     }
     else
         m_bg->Update(diff);

@@ -504,7 +504,7 @@ enum UnitVisibility
 // Value masks for UNIT_FIELD_FLAGS
 enum UnitFlags
 {
-    UNIT_FLAG_UNK_0                 = 0x00000001,           // Movement checks disabled, likely paired with loss of client control packet. We use it to add custom cliffwalking to GM mode until actual usecases will be known.
+    UNIT_FLAG_SERVER_CONTROLLED     = 0x00000001,           // Movement checks disabled, likely paired with loss of client control packet. We use it to add custom cliffwalking to GM mode until actual usecases will be known.
     UNIT_FLAG_SPAWNING              = 0x00000002,           // not attackable
     UNIT_FLAG_CLIENT_CONTROL_LOST   = 0x00000004,           // Generic unspecified loss of control initiated by server script, movement checks disabled, paired with loss of client control packet.
     UNIT_FLAG_PLAYER_CONTROLLED     = 0x00000008,           // players, pets, totems, guardians, companions, charms, any units associated with players
@@ -518,7 +518,7 @@ enum UnitFlags
     UNIT_FLAG_PET_IN_COMBAT         = 0x00000800,           // in combat?, 2.0.8
     UNIT_FLAG_PVP_DEPRECATED        = 0x00001000,           // changed in 3.0.3
     UNIT_FLAG_SILENCED              = 0x00002000,           // silenced, 2.1.1
-    UNIT_FLAG_UNK_14                = 0x00004000,           // 2.0.8
+    UNIT_FLAG_CANNOT_SWIM           = 0x00004000,           // 2.0.8
     UNIT_FLAG_SWIMMING              = 0x00008000,           // related to jerky movement in water?
     UNIT_FLAG_UNTARGETABLE          = 0x00010000,           // is not targetable by attack or spell
     UNIT_FLAG_PACIFIED              = 0x00020000,           // 3.0.3 ok
@@ -541,24 +541,25 @@ enum UnitFlags
 // Value masks for UNIT_FIELD_FLAGS_2
 enum UnitFlags2
 {
-    UNIT_FLAG2_FEIGN_DEATH          = 0x00000001,
-    UNIT_FLAG2_HIDE_BODY            = 0x00000002,           // Hides body and body armor. Weapons and shoulder and head armor still visible
-    UNIT_FLAG2_IGNORE_REPUTATION    = 0x00000004,
-    UNIT_FLAG2_COMPREHEND_LANG      = 0x00000008,
-    UNIT_FLAG2_CLONED               = 0x00000010,           // Used in SPELL_AURA_MIRROR_IMAGE
-    UNIT_FLAG2_DO_NOT_FADE_IN       = 0x00000020,
-    UNIT_FLAG2_FORCE_MOVE           = 0x00000040,
-    UNIT_FLAG2_DISARM_OFFHAND       = 0x00000080,           // also shield case
-    UNIT_FLAG2_UNK8                 = 0x00000100,
-    UNIT_FLAG2_UNK9                 = 0x00000200,
-    UNIT_FLAG2_DISARM_RANGED        = 0x00000400,
-    UNIT_FLAG2_REGENERATE_POWER     = 0x00000800,
-    UNIT_FLAG2_SPELL_CLICK_IN_GROUP = 0x00001000,
-    UNIT_FLAG2_SPELL_CLICK_DISABLED = 0x00002000,
-    UNIT_FLAG2_INTERACT_ANY_REACTION = 0x00004000,
-    UNIT_FLAG2_UNK15                = 0x00008000,
-    UNIT_FLAG2_UNK16                = 0x00010000,
-    UNIT_FLAG2_ALLOW_CHEAT_SPELLS   = 0x00040000,
+    UNIT_FLAG2_FEIGN_DEATH            = 0x00000001,
+    UNIT_FLAG2_HIDE_BODY              = 0x00000002,           // Hides body and body armor. Weapons and shoulder and head armor still visible
+    UNIT_FLAG2_IGNORE_REPUTATION      = 0x00000004,
+    UNIT_FLAG2_COMPREHEND_LANG        = 0x00000008,
+    UNIT_FLAG2_CLONED                 = 0x00000010,           // Used in SPELL_AURA_MIRROR_IMAGE
+    UNIT_FLAG2_DO_NOT_FADE_IN         = 0x00000020,
+    UNIT_FLAG2_FORCE_MOVE             = 0x00000040,
+    UNIT_FLAG2_DISARM_OFFHAND         = 0x00000080,           // also shield case
+    UNIT_FLAG2_DISABLE_PRED_STATS     = 0x00000100,           // NYI
+    UNIT_FLAG2_ALLOW_CHANGING_TALENTS = 0x00000200,           // NYI
+    UNIT_FLAG2_DISARM_RANGED          = 0x00000400,
+    UNIT_FLAG2_REGENERATE_POWER       = 0x00000800,
+    UNIT_FLAG2_SPELL_CLICK_IN_GROUP   = 0x00001000,
+    UNIT_FLAG2_SPELL_CLICK_DISABLED   = 0x00002000,
+    UNIT_FLAG2_INTERACT_ANY_REACTION  = 0x00004000,
+    UNIT_FLAG2_CANNOT_TURN            = 0x00008000,
+    UNIT_FLAG2_UNK16                  = 0x00010000,
+    UNIT_FLAG2_PLAY_DEATH_ANIM        = 0x00020000,           // NYI
+    UNIT_FLAG2_ALLOW_CHEAT_SPELLS     = 0x00040000,
 };
 
 /// Non Player Character flags
@@ -1432,6 +1433,7 @@ class Unit : public WorldObject
         void SetPower(Powers power, float val, bool withPowerUpdate = true);
         void SetMaxPower(Powers power, uint32 val);
         int32 ModifyPower(Powers power, int32 dVal);
+        [[deprecated("Use ModifyPower()")]]
         void ApplyPowerMod(Powers power, uint32 val, bool apply);
         void ApplyMaxPowerMod(Powers power, uint32 val, bool apply);
         bool HasMana() { return GetPowerType() == POWER_MANA; }
@@ -1538,7 +1540,8 @@ class Unit : public WorldObject
         virtual bool Mount(uint32 displayid, const Aura* aura = nullptr);
         virtual bool Unmount(const Aura* aura = nullptr);
 
-        VehicleInfo* GetVehicleInfo() const { return m_vehicleInfo; }
+        VehicleInfo* GetVehicleInfo() const { return m_vehicleInfo.get(); }
+        MaNGOS::unique_weak_ptr<VehicleInfo> GetVehicleInfoWeakPtr() const { return m_vehicleInfo; }
         bool IsVehicle() const { return m_vehicleInfo != nullptr; }
         void SetVehicleId(uint32 entry, uint32 overwriteNpcEntry);
         Unit const* FindRootVehicle(const Unit* whichVehicle = nullptr) const;
@@ -1589,7 +1592,7 @@ class Unit : public WorldObject
         // Unit Melee events API: Crush/Glance/Daze
         bool CanCrush() const;
         bool CanGlance() const;
-        bool CanDaze() const;
+        virtual bool CanDaze() const { return false; };
 
         void SetCanDodge(const bool flag);
         void SetCanParry(const bool flag);
@@ -2132,12 +2135,18 @@ class Unit : public WorldObject
         Powers GetPowerTypeByAuraGroup(UnitMods unitMod) const;
         bool CanModifyStats() const { return m_canModifyStats; }
         void SetCanModifyStats(bool modifyStats) { m_canModifyStats = modifyStats; }
+
+        static float GetHealthBonusFromStamina(float stamina);
+        virtual float GetHealthBonusFromStamina() const;
+        static float GetManaBonusFromIntellect(float intellect);
+        float GetManaBonusFromIntellect() const;
+
         virtual bool UpdateStats(Stats stat) = 0;
         virtual bool UpdateAllStats() = 0;
         virtual void UpdateResistances(uint32 school) = 0;
         virtual void UpdateArmor() = 0;
-        virtual void UpdateMaxHealth() = 0;
-        virtual void UpdateMaxPower(Powers power) = 0;
+        virtual void UpdateMaxHealth();
+        virtual void UpdateMaxPower(Powers power);
         virtual void UpdateAttackPowerAndDamage(bool ranged = false) = 0;
         virtual void UpdateDamagePhysical(WeaponAttackType attType) = 0;
         float GetTotalAttackPowerValue(WeaponAttackType attType) const;
@@ -2454,6 +2463,9 @@ class Unit : public WorldObject
         bool IsFeigningDeathSuccessfully() const { return hasUnitState(UNIT_STAT_FEIGN_DEATH); }
         void SetFeignDeath(bool apply, ObjectGuid casterGuid = ObjectGuid(), uint32 spellID = 0, bool dynamic = true, bool success = true);
         virtual bool IsIgnoringFeignDeath() const { return false; }
+        virtual bool IsIgnoringSanctuary() const { return false; }
+
+        virtual bool IsIgnoringMisdirect() const { return false; }
 
         virtual bool IsSlowedInCombat() const { return false; }
 
@@ -2629,6 +2641,8 @@ class Unit : public WorldObject
         void SetRootVehicle(const ObjectGuid& guid) { m_rootVehicle = guid; }
         const ObjectGuid& GetRootVehicle() const { return m_rootVehicle; }
 
+        virtual bool CannotTurn() const { return false; }
+
     protected:
         bool MeetsSelectAttackingRequirement(Unit* target, SpellEntry const* spellInfo, uint32 selectFlags, SelectAttackingTargetParams params, int32 unitConditionId) const;
 
@@ -2688,6 +2702,21 @@ class Unit : public WorldObject
         AuraList m_modAuras[TOTAL_AURAS];
         float m_auraModifiersGroup[UNIT_MOD_END][MODIFIER_TYPE_END];
 
+        enum class AttackPowerMod
+        {
+            MELEE_ATTACK_POWER  = 0,
+            RANGED_ATTACK_POWER = 1,
+            ATTACK_POWER_MOD_MAX
+        };
+
+        enum class AttackPowerModSign
+        {
+            MOD_SIGN_POS,
+            MOD_SIGN_NEG,
+            MOD_SIGN_MAX
+        };
+        float m_attackPowerMod[size_t(AttackPowerMod::ATTACK_POWER_MOD_MAX)][size_t(AttackPowerModSign::MOD_SIGN_MAX)];
+
         WeaponDamageInfo m_weaponDamageInfo;
 
         bool m_canModifyStats;
@@ -2711,7 +2740,7 @@ class Unit : public WorldObject
 
         bool m_canDualWield = false;
 
-        VehicleInfo* m_vehicleInfo;
+        MaNGOS::unique_trackable_ptr<VehicleInfo> m_vehicleInfo;
         void DisableSpline();
         void EndSpline();
         bool m_isCreatureLinkingTrigger;

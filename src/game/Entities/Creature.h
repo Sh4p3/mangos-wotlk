@@ -93,7 +93,8 @@ struct CreatureInfo
     uint32  MinLevel;
     uint32  MaxLevel;
     uint32  DifficultyEntry[MAX_DIFFICULTY - 1];
-    uint32  ModelId[MAX_CREATURE_MODEL];
+    uint32  DisplayId[MAX_CREATURE_MODEL];
+    uint32  DisplayIdProbability[MAX_CREATURE_MODEL];
     uint32  Faction;
     float   Scale;
     uint32  Family;                                         // enum CreatureFamily values (optional)
@@ -128,6 +129,11 @@ struct CreatureInfo
     float   DamageVariance;
     float   ArmorMultiplier;
     float   ExperienceMultiplier;
+    float   StrengthMultiplier;
+    float   AgilityMultiplier;
+    float   StaminaMultiplier;
+    float   IntellectMultiplier;
+    float   SpiritMultiplier;
     uint32  MinLevelHealth;
     uint32  MaxLevelHealth;
     uint32  MinLevelMana;
@@ -308,6 +314,11 @@ struct CreatureClassLvlStats
     float   BaseMeleeAttackPower;
     float   BaseRangedAttackPower;
     uint32  BaseArmor;
+    uint32  Strength;
+    uint32  Agility;
+    uint32  Stamina;
+    uint32  Intellect;
+    uint32  Spirit;
 };
 
 struct CreatureModelInfo
@@ -668,10 +679,11 @@ class Creature : public Unit
         bool UpdateAllStats() override;
         void UpdateResistances(uint32 school) override;
         void UpdateArmor() override;
-        void UpdateMaxHealth() override;
-        void UpdateMaxPower(Powers power) override;
         void UpdateAttackPowerAndDamage(bool ranged = false) override;
         void UpdateDamagePhysical(WeaponAttackType attType) override;
+        virtual float GetConditionalTotalPhysicalDamageModifier(WeaponAttackType type) const;
+        float GetHealthBonusFromStamina() const override;
+
         uint32 GetCurrentEquipmentId() const { return m_equipmentId; }
 
         static float _GetHealthMod(int32 Rank);             ///< Get custom factor to scale health (default 1, CONFIG_FLOAT_RATE_CREATURE_*_HP)
@@ -728,6 +740,7 @@ class Creature : public Unit
 
         void CallForHelp(float radius);
         void CallAssistance();
+        void CallAssistance(Unit* enemy);
         void SetNoCallAssistance(bool val) { m_AlreadyCallAssistance = val; }
         bool CanAssistTo(const Unit* u, const Unit* enemy, bool checkfaction = true) const;
         bool CanInitiateAttack() const;
@@ -743,6 +756,7 @@ class Creature : public Unit
         void RemoveCorpse(bool inPlace = false);
 
         virtual void ForcedDespawn(uint32 timeMSToDespawn = 0, bool onlyAlive = false);
+        virtual void ForcedDespawn(std::chrono::milliseconds timeToDespawn, bool onlyAlive = false) { ForcedDespawn(timeToDespawn.count(), onlyAlive); }
 
         time_t const& GetRespawnTime() const { return m_respawnTime; }
         time_t GetRespawnTimeEx() const;
@@ -752,6 +766,7 @@ class Creature : public Unit
 
         uint32 GetRespawnDelay() const { return m_respawnDelay; }
         void SetRespawnDelay(uint32 delay, bool once = false) { m_respawnDelay = delay; m_respawnOverriden = true; m_respawnOverrideOnce = once; } // in seconds
+        void SetRespawnDelay(std::chrono::seconds delay, bool once = false) { SetRespawnDelay(delay.count(), once); }
 
         float GetRespawnRadius() const { return m_respawnradius; }
         void SetRespawnRadius(float dist) { m_respawnradius = dist; }
@@ -801,6 +816,8 @@ class Creature : public Unit
         bool hasWeaponForAttack(WeaponAttackType type) const override { return (Unit::hasWeaponForAttack(type) && hasWeapon(type)); }
         virtual void SetCanDualWield(bool value) override;
 
+        virtual bool CanDaze() const override;
+
         void SetInvisible(bool invisible) { m_isInvisible = invisible; }
         bool IsInvisible() const { return m_isInvisible; }
 
@@ -837,6 +854,8 @@ class Creature : public Unit
         void SetNoReputation(bool state) { m_noReputation = state; }
         bool IsIgnoringFeignDeath() const override;
         void SetIgnoreFeignDeath(bool state);
+        bool IsIgnoringSanctuary() const override;
+        void SetIgnoreSanctuary(bool state);
 
         void SetNoWoundedSlowdown(bool state);
         bool IsNoWoundedSlowdown() const;
@@ -844,6 +863,9 @@ class Creature : public Unit
 
         void SetNoWeaponSkillGain(bool state);
         bool IsNoWeaponSkillGain() const override;
+
+        bool IsIgnoringMisdirect() const override;
+        void SetIgnoreMisdirect(bool state);
 
         bool IsPreventingDeath() const override;
 
@@ -886,6 +908,8 @@ class Creature : public Unit
         void SetKillerGuid(ObjectGuid guid) { m_killer = guid; }
 
         virtual uint32 GetDuration() const { return 0; }
+
+        virtual bool CannotTurn() const override { return m_settings.HasFlag(CreatureStaticFlags3::CANNOT_TURN); }
 
     protected:
         bool CreateFromProto(uint32 dbGuid, uint32 guidlow, CreatureInfo const* cinfo, const CreatureData* data = nullptr, GameEventCreatureData const* eventData = nullptr);

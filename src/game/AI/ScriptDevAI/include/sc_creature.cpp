@@ -53,12 +53,15 @@ void ScriptedAI::EnterCombat(Unit* enemy)
 void ScriptedAI::EnterEvadeMode()
 {
     CreatureAI::EnterEvadeMode();
+
+    ResetTimersOnEvade();
     Reset();
 }
 
 /// This function calls Reset() to reset variables as expected
 void ScriptedAI::JustRespawned()
 {
+    ResetAllTimers();
     Reset();
 }
 

@@ -601,8 +601,10 @@ bool Creature::UpdateEntry(uint32 Entry, const CreatureData* data /*=nullptr*/, 
     if (IsWorldBoss())
         ApplySpellImmune(nullptr, IMMUNITY_STATE, SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE, true);
 
-    if ((GetCreatureInfo()->RegenerateStats & (REGEN_FLAG_POWER_IN_COMBAT | REGEN_FLAG_POWER)) == (REGEN_FLAG_POWER_IN_COMBAT | REGEN_FLAG_POWER))
-        SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_REGENERATE_POWER);
+    if (m_settings.HasFlag(CreatureStaticFlags::NO_AUTOMATIC_REGEN))
+        RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_REGENERATE_POWER);
+    else if ((GetCreatureInfo()->RegenerateStats & (REGEN_FLAG_POWER_IN_COMBAT | REGEN_FLAG_POWER)) == (REGEN_FLAG_POWER_IN_COMBAT | REGEN_FLAG_POWER))
+        SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_REGENERATE_POWER);        
 
     SetCanModifyStats(true);
     UpdateAllStats();
@@ -689,37 +691,25 @@ uint32 Creature::ChooseDisplayId(const CreatureInfo* cinfo, const CreatureData* 
 
     // use defaults from the template
     uint32 display_id = 0;
+    // pick based on probability
+    uint32 chanceTotal = 0;
+    for (uint32 i = 0; i < MAX_CREATURE_MODEL; ++i)
+        if (cinfo->DisplayId[i])
+            chanceTotal += cinfo->DisplayIdProbability[i];
 
-    // models may be categorized as (in this order):
-    // if mod4 && mod3 && mod2 && mod1  use any, by 25%-chance (other gender is selected and replaced after this function)
-    // if mod3 && mod2 && mod1          use mod3 unless mod2 has modelid_alt_model (then all by 33%-chance)
-    // if mod2                          use mod2 unless mod2 has modelid_alt_model (then both by 50%-chance)
-    // if mod1                          use mod1
-
-    // The follow decision tree needs to be updated if MAX_CREATURE_MODEL is changed.
-    static_assert(MAX_CREATURE_MODEL == 4, "Need to update model selection code for new or removed model fields");
-
-    // model selected here may be replaced with other_gender using own function
-    if (cinfo->ModelId[3] && cinfo->ModelId[2] && cinfo->ModelId[1] && cinfo->ModelId[0])
+    int32 roll = irand(0, std::max(int32(chanceTotal) - 1, 0)); // avoid 0
+    for (uint32 i = 0; i < MAX_CREATURE_MODEL; ++i)
     {
-        display_id = cinfo->ModelId[urand(0, 3)];
-    }
-    else if (cinfo->ModelId[2] && cinfo->ModelId[1] && cinfo->ModelId[0])
-    {
-        uint32 modelid_tmp = sObjectMgr.GetCreatureModelAlternativeModel(cinfo->ModelId[1]);
-        display_id = modelid_tmp ? cinfo->ModelId[urand(0, 2)] : cinfo->ModelId[2];
-    }
-    else if (cinfo->ModelId[1])
-    {
-        // We use this to eliminate invisible models vs. "dummy" models (infernals, etc).
-        // Where it's expected to select one of two, model must have a alternative model defined (alternative model is normally the same as defined in ModelId1).
-        // Same pattern is used in the above model selection, but the result may be ModelId3 and not ModelId2 as here.
-        uint32 modelid_tmp = sObjectMgr.GetCreatureModelAlternativeModel(cinfo->ModelId[1]);
-        display_id = modelid_tmp ? cinfo->ModelId[urand(0, 1)] : cinfo->ModelId[1];
-    }
-    else if (cinfo->ModelId[0])
-    {
-        display_id = cinfo->ModelId[0];
+        if (cinfo->DisplayId[i])
+        {
+            if (roll < int32(cinfo->DisplayIdProbability[i]))
+            {
+                display_id = cinfo->DisplayId[i];
+                break;
+            }
+            else
+                roll -= cinfo->DisplayIdProbability[i];
+        }
     }
 
     // fail safe, we use creature entry 1 and make error
@@ -728,7 +718,7 @@ uint32 Creature::ChooseDisplayId(const CreatureInfo* cinfo, const CreatureData* 
         sLog.outErrorDb("Call customer support, ChooseDisplayId can not select native model for creature entry %u, model from creature entry 1 will be used instead.", cinfo->Entry);
 
         if (const CreatureInfo* creatureDefault = ObjectMgr::GetCreatureTemplate(1))
-            display_id = creatureDefault->ModelId[0];
+            display_id = creatureDefault->DisplayId[0];
     }
 
     return display_id;
@@ -1093,7 +1083,7 @@ bool Creature::CanInteractWithBattleMaster(Player* pPlayer, bool msg) const
     if (!isBattleMaster())
         return false;
 
-    BattleGroundTypeId bgTypeId = sBattleGroundMgr.GetBattleMasterBG(GetEntry());
+    BattleGroundTypeId bgTypeId = GetMap()->GetMapDataContainer().GetBattleMasterBG(GetEntry());
     if (bgTypeId == BATTLEGROUND_TYPE_NONE)
         return false;
 
@@ -1262,12 +1252,12 @@ void Creature::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
         // The following if-else assumes that there are 4 model fields and needs updating if this is changed.
         static_assert(MAX_CREATURE_MODEL == 4, "Need to update custom model check for new/removed model fields.");
 
-        if (displayId != cinfo->ModelId[0] && displayId != cinfo->ModelId[1] &&
-                displayId != cinfo->ModelId[2] && displayId != cinfo->ModelId[3])
+        if (displayId != cinfo->DisplayId[0] && displayId != cinfo->DisplayId[1] &&
+                displayId != cinfo->DisplayId[2] && displayId != cinfo->DisplayId[3])
         {
             for (int i = 0; i < MAX_CREATURE_MODEL && displayId; ++i)
-                if (cinfo->ModelId[i])
-                    if (CreatureModelInfo const* minfo = sObjectMgr.GetCreatureModelInfo(cinfo->ModelId[i]))
+                if (cinfo->DisplayId[i])
+                    if (CreatureModelInfo const* minfo = sObjectMgr.GetCreatureModelInfo(cinfo->DisplayId[i]))
                         if (displayId == minfo->modelid_other_gender)
                             displayId = 0;
         }
@@ -1353,6 +1343,15 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
     float meleeAttackPwr = 0.f;
     float rangedAttackPwr = 0.f;
 
+    float healthMultiplier = 1.f;
+    float powerMultiplier = 1.f;
+
+    float strength = 0.f;
+    float agility = 0.f;
+    float stamina = 0.f;
+    float intellect = 0.f;
+    float spirit = 0.f;
+
     float damageMod = _GetDamageMod(rank);
     float damageMulti = cinfo->DamageMultiplier * damageMod;
     bool usedDamageMulti = false;
@@ -1361,13 +1360,17 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
     {
         // Use Creature Stats to calculate stat values
 
-        // health
         if (cinfo->HealthMultiplier >= 0)
-            health = std::round(cCLS->BaseHealth * cinfo->HealthMultiplier);
+            health = cCLS->BaseHealth;
+        // health
+        if (cinfo->HealthMultiplier > 0)
+            healthMultiplier = cinfo->HealthMultiplier;
 
-        // mana
         if (cinfo->PowerMultiplier >= 0)
-            mana = std::round(cCLS->BaseMana * cinfo->PowerMultiplier);
+            mana = cCLS->BaseMana;
+        // mana
+        if (cinfo->PowerMultiplier > 0)
+            powerMultiplier = cinfo->PowerMultiplier;
 
         // armor
         if (cinfo->ArmorMultiplier >= 0)
@@ -1388,6 +1391,18 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
             meleeAttackPwr = cCLS->BaseMeleeAttackPower;
             rangedAttackPwr = cCLS->BaseRangedAttackPower;
         }
+
+        // attributes
+        if (cinfo->StrengthMultiplier >= 0)
+            strength = cCLS->Strength * cinfo->StrengthMultiplier;
+        if (cinfo->AgilityMultiplier >= 0)
+            agility = cCLS->Agility * cinfo->AgilityMultiplier;
+        if (cinfo->StaminaMultiplier >= 0)
+            stamina = cCLS->Stamina * cinfo->StaminaMultiplier;
+        if (cinfo->IntellectMultiplier >= 0)
+            intellect = cCLS->Intellect * cinfo->IntellectMultiplier;
+        if (cinfo->SpiritMultiplier >= 0)
+            spirit = cCLS->Spirit * cinfo->SpiritMultiplier;
     }
 
     if (!usedDamageMulti || health == -1 || mana == -1 || armor == -1.f) // some field needs to default to old db fields
@@ -1453,7 +1468,6 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
     // health
     SetCreateHealth(health);
     SetMaxHealth(health);
-    SetHealth(health);
 
     // all power types
     for (int i = POWER_MANA; i <= POWER_RUNIC_POWER; ++i)
@@ -1479,7 +1493,6 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
 
         // Mana requires an extra field to be set
         SetMaxPower(Powers(i), maxValue);
-        SetPower(Powers(i), value);
 
         if (i == POWER_MANA)
             SetCreateMana(value);
@@ -1502,7 +1515,22 @@ void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
     SetModifierValue(UNIT_MOD_ATTACK_POWER, BASE_VALUE, meleeAttackPwr * damageMod);
     SetModifierValue(UNIT_MOD_ATTACK_POWER_RANGED, BASE_VALUE, rangedAttackPwr * damageMod);
 
+    // primary attributes
+    SetCreateStat(STAT_STRENGTH, strength);
+    SetCreateStat(STAT_AGILITY, agility);
+    SetCreateStat(STAT_STAMINA, stamina);
+    SetCreateStat(STAT_INTELLECT, intellect);
+    SetCreateStat(STAT_SPIRIT, spirit);
+
+    // multipliers
+    SetModifierValue(UNIT_MOD_HEALTH, TOTAL_PCT, healthMultiplier);
+    SetModifierValue(UnitMods(UNIT_MOD_MANA + (int)GetPowerType()), TOTAL_PCT, powerMultiplier);
+
     UpdateAllStats();
+
+    SetHealth(GetMaxHealth());
+    for (int i = POWER_MANA; i <= POWER_HAPPINESS; ++i)
+        SetPower(Powers(i), GetMaxPower(Powers(i)));
 }
 
 float Creature::_GetHealthMod(int32 Rank)
@@ -1897,7 +1925,10 @@ void Creature::SetDeathState(DeathState s)
         else if (m_respawnOverrideOnce)
             m_respawnOverriden = false;
 
-        m_corpseExpirationTime = GetMap()->GetCurrentClockTime() + std::chrono::milliseconds(m_corpseDelay * IN_MILLISECONDS); // the max/default time for corpse decay (before creature is looted/AllLootRemovedFromCorpse() is called)
+        if (m_settings.HasFlag(CreatureStaticFlags3::FOREVER_CORPSE_DURATION))
+            m_corpseExpirationTime = GetMap()->GetCurrentClockTime() + std::chrono::hours(24*7);
+        else
+            m_corpseExpirationTime = GetMap()->GetCurrentClockTime() + std::chrono::seconds(m_corpseDelay); // the max/default time for corpse decay (before creature is looted/AllLootRemovedFromCorpse() is called)
         m_respawnTime = time(nullptr) + m_respawnDelay; // respawn delay (spawntimesecs)
 
         // always save boss respawn time at death to prevent crash cheating
@@ -2176,8 +2207,13 @@ bool Creature::IsVisibleInGridForPlayer(Player* pl) const
 
 void Creature::CallAssistance()
 {
+    CallAssistance(GetVictim());
+}
+
+void Creature::CallAssistance(Unit* enemy)
+{
     // FIXME: should player pets call for assistance?
-    if (!m_AlreadyCallAssistance && GetVictim() && !HasCharmer())
+    if (!m_AlreadyCallAssistance && enemy && !HasCharmer())
     {
         MANGOS_ASSERT(AI());
 
@@ -2189,7 +2225,7 @@ void Creature::CallAssistance()
         float radius = sWorld.getConfig(CONFIG_FLOAT_CREATURE_FAMILY_ASSISTANCE_RADIUS);
         if (GetCreatureInfo()->CallForHelp > 0)
             radius = GetCreatureInfo()->CallForHelp;
-        AI()->SendAIEventAround(AI_EVENT_CALL_ASSISTANCE, GetVictim(), sWorld.getConfig(CONFIG_UINT32_CREATURE_FAMILY_ASSISTANCE_DELAY), radius);
+        AI()->SendAIEventAround(AI_EVENT_CALL_ASSISTANCE, enemy, sWorld.getConfig(CONFIG_UINT32_CREATURE_FAMILY_ASSISTANCE_DELAY), radius);
     }
 }
 
@@ -2683,9 +2719,9 @@ void Creature::ClearTemporaryFaction()
     if (m_temporaryFactionFlags & TEMPFACTION_TOGGLE_NON_ATTACKABLE && GetCreatureInfo()->UnitFlags & UNIT_FLAG_SPAWNING)
         SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SPAWNING);
     if (m_temporaryFactionFlags & TEMPFACTION_TOGGLE_IMMUNE_TO_PLAYER && GetCreatureInfo()->UnitFlags & UNIT_FLAG_IMMUNE_TO_PLAYER)
-        SetImmuneToPlayer(false);
+        SetImmuneToPlayer(true);
     if (m_temporaryFactionFlags & TEMPFACTION_TOGGLE_IMMUNE_TO_NPC && GetCreatureInfo()->UnitFlags & UNIT_FLAG_IMMUNE_TO_NPC)
-        SetImmuneToNPC(false);
+        SetImmuneToNPC(true);
     if (m_temporaryFactionFlags & TEMPFACTION_TOGGLE_PACIFIED && GetCreatureInfo()->UnitFlags & UNIT_FLAG_PACIFIED)
         SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED);
     if (m_temporaryFactionFlags & TEMPFACTION_TOGGLE_NOT_SELECTABLE && GetCreatureInfo()->UnitFlags & UNIT_FLAG_UNINTERACTIBLE)
@@ -2777,6 +2813,8 @@ void Creature::InspectingLoot()
 {
     // until multiple corpse for creature is not supported
     // this will not have effect after re spawn delay (corpse will be removed anyway)
+    if (m_settings.HasFlag(CreatureStaticFlags3::FOREVER_CORPSE_DURATION))
+        return;
 
     // check if player have enough time to inspect loot
     if (m_corpseExpirationTime < GetMap()->GetCurrentClockTime() + std::chrono::milliseconds(m_corpseAccelerationDecayDelay))
@@ -2787,6 +2825,9 @@ void Creature::InspectingLoot()
 void Creature::ReduceCorpseDecayTimer()
 {
     if (!IsInWorld())
+        return;
+
+    if (m_settings.HasFlag(CreatureStaticFlags3::FOREVER_CORPSE_DURATION))
         return;
 
     if (m_corpseExpirationTime > GetMap()->GetCurrentClockTime() + std::chrono::milliseconds(m_corpseAccelerationDecayDelay))
@@ -2931,6 +2972,32 @@ void Creature::SetIgnoreFeignDeath(bool state)
         m_settings.RemoveFlag(CreatureStaticFlags2::IGNORE_FEIGN_DEATH);
 }
 
+bool Creature::IsIgnoringSanctuary() const
+{
+    return m_settings.HasFlag(CreatureStaticFlags2::IGNORE_SANCTUARY);
+}
+
+void Creature::SetIgnoreSanctuary(bool state)
+{
+    if (state)
+        m_settings.SetFlag(CreatureStaticFlags2::IGNORE_SANCTUARY);
+    else
+        m_settings.RemoveFlag(CreatureStaticFlags2::IGNORE_SANCTUARY);
+}
+
+bool Creature::IsIgnoringMisdirect() const
+{
+    return m_settings.HasFlag(CreatureStaticFlags2::IGNORE_MISDIRECTION);
+}
+
+void Creature::SetIgnoreMisdirect(bool state)
+{
+    if (state)
+        m_settings.SetFlag(CreatureStaticFlags2::IGNORE_MISDIRECTION);
+    else
+        m_settings.RemoveFlag(CreatureStaticFlags2::IGNORE_MISDIRECTION);
+}
+
 void Creature::SetNoWoundedSlowdown(bool state)
 {
     if (state)
@@ -3019,6 +3086,12 @@ void Creature::SetCanDualWield(bool state)
 {
     Unit::SetCanDualWield(state);
     UpdateDamagePhysical(OFF_ATTACK);
+}
+
+bool Creature::CanDaze() const
+{
+    // Generally, only npcs are able to daze targets in melee
+    return (!IsPlayerControlled() && !GetSettings().HasFlag(CreatureStaticFlags4::CANNOT_DAZE));
 }
 
 bool Creature::CanRestockPickpocketLoot() const

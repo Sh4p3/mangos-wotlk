@@ -104,7 +104,7 @@ WorldSession::WorldSession(uint32 id, WorldSocket* sock, AccountTypes sec, uint8
     m_inQueue(false), m_playerLoading(false), m_kickSession(false), m_playerLogout(false), m_playerRecentlyLogout(false), m_playerSave(true),
     m_sessionDbcLocale(sWorld.GetAvailableDbcLocale(locale)), m_sessionDbLocaleIndex(sObjectMgr.GetStorageLocaleIndexFor(locale)),
     m_latency(0), m_clientTimeDelay(0), m_tutorialState(TUTORIALDATA_UNCHANGED), m_sessionState(WORLD_SESSION_STATE_CREATED),
-    m_timeSyncClockDeltaQueue(6), m_timeSyncClockDelta(0), m_pendingTimeSyncRequests(), m_timeSyncNextCounter(0), m_timeSyncTimer(0),
+    m_timeSyncClockDeltaQueue(6), m_timeSyncClockDelta(0), m_pendingTimeSyncRequests(), m_timeSyncNextCounter(0),
     m_requestSocket(nullptr), m_recruitingFriendId(recruitingFriend), m_isRecruiter(isARecruiter) {}
 
 /// WorldSession destructor
@@ -699,7 +699,10 @@ void WorldSession::LogoutPlayer()
             if (BattleGroundQueueTypeId bgQueueTypeId = _player->GetBattleGroundQueueTypeId(i))
             {
                 _player->RemoveBattleGroundQueueId(bgQueueTypeId);
-                sBattleGroundMgr.m_battleGroundQueues[ bgQueueTypeId ].RemovePlayer(_player->GetObjectGuid(), true);
+                sBattleGroundMgr.GetMessager().AddMessage([bgQueueTypeId, playerGuid = _player->GetObjectGuid()](BattleGroundMgr* mgr)
+                {
+                    mgr->m_battleGroundQueues[bgQueueTypeId].RemovePlayer(playerGuid, true);
+                });
             }
         }
 
@@ -1341,8 +1344,6 @@ void WorldSession::SendTimeSync()
 
     m_pendingTimeSyncRequests[m_timeSyncNextCounter] = WorldTimer::getMSTime();
 
-    // Schedule next sync in 10 sec (except for the 2 first packets, which are spaced by only 5s)
-    m_timeSyncTimer = m_timeSyncNextCounter == 0 ? 5000 : 10000;
     m_timeSyncNextCounter++;
 }
 

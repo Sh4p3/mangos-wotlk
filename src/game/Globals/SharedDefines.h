@@ -1337,7 +1337,7 @@ enum CreatureTypeFlags
     CREATURE_TYPEFLAGS_EXOTIC           = 0x00010000,       // Can be tamed by hunter as exotic pet
     CREATURE_TYPEFLAGS_UNK18            = 0x00020000,       // related to CreatureDisplayInfo and scaling in some way
     CREATURE_TYPEFLAGS_SIEGE_WEAPON     = 0x00040000,       // Related to vehicle/siege weapons
-    CREATURE_TYPEFLAGS_UNK20            = 0x00080000,       // may be has something to do with missiles
+    CREATURE_TYPEFLAGS_COLLIDE_WITH_MISSILES = 0x00080000,  // 
     CREATURE_TYPEFLAGS_UNK21            = 0x00100000,       // no idea, but it used by client, may be related to rendering
     CREATURE_TYPEFLAGS_UNK22            = 0x00200000,       // may be has something to do with animation (disable animation?)
     CREATURE_TYPEFLAGS_UNK23            = 0x00400000,       // this one probably controls some creature visual
@@ -2066,36 +2066,6 @@ enum BanReturn
     BAN_SYNTAX_ERROR,
     BAN_NOTFOUND
 };
-
-// indexes of BattlemasterList.dbc
-enum BattleGroundTypeId
-{
-    BATTLEGROUND_TYPE_NONE     = 0,
-    BATTLEGROUND_AV            = 1,
-    BATTLEGROUND_WS            = 2,
-    BATTLEGROUND_AB            = 3,
-    BATTLEGROUND_NA            = 4,
-    BATTLEGROUND_BE            = 5,
-    BATTLEGROUND_AA            = 6,                         // all arenas
-    BATTLEGROUND_EY            = 7,
-    BATTLEGROUND_RL            = 8,
-    BATTLEGROUND_SA            = 9,
-    BATTLEGROUND_DS            = 10,
-    BATTLEGROUND_RV            = 11,
-    BATTLEGROUND_IC            = 30,
-    BATTLEGROUND_RB            = 32                         // random battleground
-};
-#define MAX_BATTLEGROUND_TYPE_ID 33
-
-enum ArenaType
-{
-    ARENA_TYPE_NONE         = 0,                            // used for mark non-arenas or problematic cases
-    ARENA_TYPE_2v2          = 2,
-    ARENA_TYPE_3v3          = 3,
-    ARENA_TYPE_5v5          = 5
-};
-
-inline bool IsArenaTypeValid(ArenaType type) { return type == ARENA_TYPE_2v2 || type == ARENA_TYPE_3v3 || type == ARENA_TYPE_5v5; }
 
 enum MailResponseType
 {
