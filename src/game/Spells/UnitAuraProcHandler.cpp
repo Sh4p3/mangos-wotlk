@@ -543,7 +543,7 @@ void Unit::ProcDamageAndSpellFor(ProcSystemArguments& argData, bool isVictim)
     {
         SpellAuraHolder* holder = itr->second;
         // skip deleted auras (possible at recursive triggered call
-        if (!holder->IsPermanent() && holder->GetState() != SPELLAURAHOLDER_STATE_READY || holder->IsDeleted())
+        if (holder->GetState() > SPELLAURAHOLDER_STATE_READY || holder->IsDeleted())
             continue;
 
         SpellProcEventEntry const* spellProcEvent = nullptr;
@@ -650,7 +650,7 @@ void Unit::ProcDamageAndSpellFor(ProcSystemArguments& argData, bool isVictim)
             anyAuraProc = true;
         }
 
-        if (procSuccess && execData.cooldown)
+        if (anyAuraProc && procSuccess && execData.cooldown)
             triggeredByHolder->SetProcCooldown(std::chrono::seconds(execData.cooldown), GetMap()->GetCurrentClockTime());
 
         // Remove charge (aura can be removed by triggers)
