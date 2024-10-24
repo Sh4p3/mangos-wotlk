@@ -6194,6 +6194,16 @@ void Aura::HandlePeriodicDamage(bool apply, bool Real)
                     if (spellProto->CalculateSimpleValue(EFFECT_INDEX_1) != 0 &&
                             target->GetHealth() > target->GetMaxHealth() * spellProto->CalculateSimpleValue(EFFECT_INDEX_1) / 100)
                         m_modifier.m_amount += m_modifier.m_amount * spellProto->CalculateSimpleValue(EFFECT_INDEX_2) / 100;
+                    // Improved rend talent
+                    Unit::AuraList const& dummyAuras = caster->GetAurasByType(SPELL_AURA_ADD_PCT_MODIFIER);
+                    for (auto dummyAura : dummyAuras)
+                    {
+                        if (dummyAura->GetId() == 12286 || dummyAura->GetId() == 12658)
+                        {
+                            m_modifier.m_amount += m_modifier.m_amount * dummyAura->GetModifier()->m_amount / 100;
+                            break;
+                        }
+                    }
                 }
                 break;
             }
