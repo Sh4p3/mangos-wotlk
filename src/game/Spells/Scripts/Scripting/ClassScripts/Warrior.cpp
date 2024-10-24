@@ -328,6 +328,18 @@ struct GlyphOfVictoryRush : public AuraScript
     }
 };
 
+// 64382 - Shattering Throw
+struct ShatteringThrow : public SpellScript
+{
+    void OnHit(Spell* spell, SpellMissInfo missInfo) const override
+    {
+        if (missInfo == SPELL_MISS_IMMUNE) {
+            if (Unit* target = spell->GetUnitTarget()) 
+                target->RemoveAurasAtMechanicImmunity(IMMUNE_TO_EVERYTHING, 0);
+        }
+    }
+};
+
 void LoadWarriorScripts()
 {
     RegisterSpellScript<WarriorExecute>("spell_warrior_execute");
@@ -345,4 +357,5 @@ void LoadWarriorScripts()
     RegisterSpellScript<VigilanceRedirect>("spell_vigilance_redirect");
     RegisterSpellScript<Intervene>("spell_intervene");
     RegisterSpellScript<GlyphOfVictoryRush>("spell_glyph_of_victory_rush");
+    RegisterSpellScript<ShatteringThrow>("spell_shattering_throw");
 }

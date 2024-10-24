@@ -432,6 +432,9 @@ enum Mechanics
 #define IMMUNE_TO_INTERRUPT_AND_SILENCE_MASK ( \
     (1<<(MECHANIC_INTERRUPT-1))|(1<<(MECHANIC_SILENCE-1)))
 
+#define IMMUNE_TO_EVERYTHING ( \
+    (1<<(MECHANIC_IMMUNE_SHIELD-1)))
+
 // Daze and all croud control spells except polymorph are not removed
 #define MECHANIC_NOT_REMOVED_BY_SHAPESHIFT ( \
     (1<<(MECHANIC_CHARM -1))|(1<<(MECHANIC_DISORIENTED-1))|(1<<(MECHANIC_FEAR  -1))| \
